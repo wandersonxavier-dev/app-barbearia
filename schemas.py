@@ -42,8 +42,10 @@ class ClienteResponseSchema(ClienteCriarSchema):
 # --- Schemas de Produtos ---
 class ProdutoCriarSchema(BaseModel):
     nome: str
+    descricao: Optional[str] = None
     preco: float
     quantidade_estoque: int
+    imagem_url: Optional[str] = None
 
 
 class ProdutoResponseSchema(ProdutoCriarSchema):
@@ -64,7 +66,7 @@ class ItemPedidoResponseSchema(BaseModel):
     produto_id: int
     quantidade: int
     preco_unitario: float
-    produto: Optional[ProdutoResponseSchema] = None  # <-- Adicionado para trazer o nome do produto
+    produto: Optional[ProdutoResponseSchema] = None
 
     class Config:
         from_attributes = True
@@ -79,7 +81,7 @@ class PedidoCriarPublicoSchema(BaseModel):
 class PedidoResponseSchema(BaseModel):
     id: int
     cliente_id: int
-    cliente: Optional[ClienteResponseSchema] = None  # <-- Adicionado para trazer nome e telefone do cliente
+    cliente: Optional[ClienteResponseSchema] = None
     status_pagamento: StatusPagamento
     status_pedido: StatusPedido
     data_criacao: datetime

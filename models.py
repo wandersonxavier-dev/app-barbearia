@@ -50,9 +50,10 @@ class Produto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
+    descricao = Column(Text, nullable=True)
     preco = Column(Float, nullable=False)
     quantidade_estoque = Column(Integer, default=0)
-    imagem_url = Column(Text, nullable=True)  # Suporta tanto URLs normais quanto fotos em Base64
+    imagem_url = Column(Text, nullable=True)
 
 
 class Pedido(Base):
