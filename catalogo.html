@@ -109,6 +109,8 @@
       padding: 16px;
       box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
       text-align: center;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .btn-submit {
       background-color: #f39c12;
@@ -121,6 +123,18 @@
       width: 100%;
       max-width: 500px;
       cursor: pointer;
+    }
+    .btn-pix-copy {
+      background-color: #333;
+      color: #f39c12;
+      border: 1px solid #f39c12;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 4px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 6px;
     }
     .form-group {
       margin-bottom: 10px;
@@ -142,8 +156,25 @@
       font-size: 14px;
       box-sizing: border-box;
     }
+    .pix-box {
+      display: none;
+      background: #252525;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      margin-bottom: 10px;
+      border: 1px dashed #f39c12;
+    }
+    .pix-box img {
+      width: 140px;
+      height: 140px;
+      background: #fff;
+      padding: 6px;
+      border-radius: 6px;
+      margin: 8px 0;
+    }
     .spacer {
-      height: 240px;
+      height: 320px;
     }
   </style>
 </head>
@@ -173,11 +204,21 @@
     </div>
     <div class="form-group">
       <label for="pagamento">Forma de Pagamento:</label>
-      <select id="pagamento">
-        <option value="pendente">Pagar na retirada (Pendente)</option>
-        <option value="pago">Já pago via PIX/Cartão</option>
+      <select id="pagamento" onchange="alternarFormaPagamento()">
+        <option value="retirada">Pagar na retirada (Dinheiro / Cartão)</option>
+        <option value="pix">Pagar agora via PIX</option>
       </select>
     </div>
+
+    <!-- ÁREA DINÂMICA DO PIX -->
+    <div class="pix-box" id="pix-box">
+      <div style="font-size: 13px; font-weight: bold; color: #f39c12;">Escaneie o QR Code ou Copie a Chave:</div>
+      <img id="img-pix-qr" src="" alt="QR Code PIX">
+      <input type="text" id="pix-key-display" readonly style="text-align: center; font-weight: bold; color: #2ecc71; background: #1a1a1a; font-size: 12px;">
+      <button type="button" class="btn-pix-copy" onclick="copiarPix()">📋 Copiar Chave PIX</button>
+      <small style="font-size: 11px; color: #888; display: block; margin-top: 6px;">Após pagar, conclua o pedido para enviar o comprovante via WhatsApp.</small>
+    </div>
+
     <button class="btn-submit" id="btn-enviar" onclick="enviarPedido()">Finalizar Pedido (<span id="total-carrinho">R$ 0,00</span>)</button>
   </div>
 </div>
@@ -185,11 +226,19 @@
 <script>
   const API_URL = "https://app-barbearia-api.onrender.com";
 
+  // ==========================================
+  // CONFIGURAÇÕES DO BARBEIRO (ALTERE AQUI)
+  // ==========================================
+  const CHAVE_PIX_BARBEIRO = "COLE_AQUI_A_CHAVE_PIX";
+  const WHATSAPP_BARBEIRO = "5511999999999"; // Formato: 55 + DDD + Número (apenas números)
+  // ==========================================
+
   let produtos = [];
   let carrinho = {};
 
   document.getElementById("cliente-nome").value = localStorage.getItem("cliente_nome") || "";
   document.getElementById("cliente-telefone").value = localStorage.getItem("cliente_tel") || "";
+  document.getElementById("pix-key-display").value = CHAVE_PIX_BARBEIRO;
 
   async function carregarProdutos() {
     try {
@@ -211,19 +260,22 @@
 
     container.innerHTML = produtos.map(p => {
       const foto = p.imagem_url || "https://i.imgur.com/LYFvFkx.png";
+      const esgotado = p.quantidade_estoque <= 0;
       return `
         <div class="card" id="card-prod-${p.id}">
           <img src="${foto}" class="card-img" alt="${p.nome}" onerror="this.src='https://i.imgur.com/LYFvFkx.png'">
           <div class="card-info">
             <h3>${p.nome}</h3>
             <p>R$ ${p.preco.toFixed(2)}</p>
-            <small>Estoque: ${p.quantidade_estoque}</small>
+            <small>${esgotado ? '<span style="color:#e74c3c;">Esgotado</span>' : `Estoque: ${p.quantidade_estoque}`}</small>
           </div>
-          <div class="card-controls">
-            <button class="btn-qty" onclick="alterarQtd(${p.id}, -1)">-</button>
-            <span class="qty-display" id="qty-${p.id}">${carrinho[p.id] || 0}</span>
-            <button class="btn-qty" onclick="alterarQtd(${p.id}, 1, ${p.quantidade_estoque})">+</button>
-          </div>
+          ${!esgotado ? `
+            <div class="card-controls">
+              <button class="btn-qty" onclick="alterarQtd(${p.id}, -1)">-</button>
+              <span class="qty-display" id="qty-${p.id}">${carrinho[p.id] || 0}</span>
+              <button class="btn-qty" onclick="alterarQtd(${p.id}, 1, ${p.quantidade_estoque})">+</button>
+            </div>
+          ` : ''}
         </div>
       `;
     }).join("");
@@ -265,18 +317,45 @@
     atualizarTotal();
   }
 
-  function atualizarTotal() {
+  function calcularTotalNumerico() {
     let total = 0;
     produtos.forEach(p => {
       const qtd = carrinho[p.id] || 0;
       total += qtd * p.preco;
     });
+    return total;
+  }
+
+  function atualizarTotal() {
+    const total = calcularTotalNumerico();
     document.getElementById("total-carrinho").innerText = `R$ ${total.toFixed(2)}`;
+  }
+
+  function alternarFormaPagamento() {
+    const opcao = document.getElementById("pagamento").value;
+    const pixBox = document.getElementById("pix-box");
+
+    if (opcao === "pix") {
+      pixBox.style.display = "block";
+      const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(CHAVE_PIX_BARBEIRO)}&size=200`;
+      document.getElementById("img-pix-qr").src = qrUrl;
+    } else {
+      pixBox.style.display = "none";
+    }
+  }
+
+  function copiarPix() {
+    const chave = document.getElementById("pix-key-display").value;
+    navigator.clipboard.writeText(chave).then(() => {
+      alert("Chave PIX copiada para a área de transferência!");
+    });
   }
 
   async function enviarPedido() {
     const nome = document.getElementById("cliente-nome").value.trim();
     const telefone = document.getElementById("cliente-telefone").value.trim();
+    const formaPagamento = document.getElementById("pagamento").value;
+    const totalPedido = calcularTotalNumerico();
 
     if (!nome || !telefone) {
       alert("Preencha Nome e WhatsApp antes de finalizar.");
@@ -312,7 +391,7 @@
 
       const payloadPedido = {
         cliente_id: clienteData.id,
-        status_pagamento: document.getElementById("pagamento").value,
+        status_pagamento: "pendente", // Todo pedido entra como pendente por segurança
         itens: itens
       };
 
@@ -324,7 +403,15 @@
 
       if (respPedido.ok) {
         const ped = await respPedido.json();
-        alert(`🎉 Pedido #${ped.id} enviado com sucesso!`);
+
+        if (formaPagamento === "pix") {
+          alert(`🎉 Pedido #${ped.id} registrado! Você será redirecionado para o WhatsApp da barbearia para enviar o comprovante do PIX.`);
+          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)} pelo app. Segue o comprovante do pagamento via PIX:`);
+          window.open(`https://wa.me/${WHATSAPP_BARBEIRO}?text=${msg}`, "_blank");
+        } else {
+          alert(`🎉 Pedido #${ped.id} registrado com sucesso! O pagamento será feito na retirada.`);
+        }
+
         window.location.href = "/catalogo.html";
       } else {
         const err = await respPedido.json();
