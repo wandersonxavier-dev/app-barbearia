@@ -9,7 +9,7 @@ import models
 import schemas
 import security
 
-# 1. Cria as tabelas no SQLite se não existirem
+# 1. Cria as tabelas se não existirem
 Base.metadata.create_all(bind=engine)
 
 # 2. Inicializa a aplicação
@@ -85,7 +85,7 @@ def login(
 
 
 # ==========================================
-# 2. CLIENTES (Protegido)
+# 2. CLIENTES (Público para criar, Protegido para listar)
 # ==========================================
 
 
@@ -95,19 +95,20 @@ def login(
     status_code=status.HTTP_201_CREATED,
     tags=["Clientes"],
 )
-def cadastrar_cliente(
-    dados: schemas.ClienteCriarSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+def cadastrar_ou_obter_cliente(
+    dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    if (
+    # Se o cliente já existir pelo telefone, atualiza o nome e retorna o existente
+    cliente_existente = (
         db.query(models.Cliente)
         .filter(models.Cliente.telefone == dados.telefone)
         .first()
-    ):
-        raise HTTPException(
-            status_code=400, detail="Cliente com este telefone já existe."
-        )
+    )
+    if cliente_existente:
+        cliente_existente.nome = dados.nome
+        db.commit()
+        db.refresh(cliente_existente)
+        return cliente_existente
 
     novo_cliente = models.Cliente(**dados.model_dump())
     db.add(novo_cliente)
