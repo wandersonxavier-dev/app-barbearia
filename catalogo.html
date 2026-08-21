@@ -392,32 +392,29 @@
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
-      // 1. Cadastra ou busca cliente
-      const respCliente = await fetch(`${API_URL}/clientes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, telefone })
-      });
-
-      if (!respCliente.ok) {
-        const errCli = await respCliente.json();
-        throw new Error(`Erro ao registrar cliente: ${formatarErroApi(errCli)}`);
-      }
-
-      const clienteData = await respCliente.json();
-
-      // 2. Cria o pedido
+      // Payload contendo os dados do cliente e do pedido em uma única chamada pública
       const payloadPedido = {
-        cliente_id: clienteData.id,
+        cliente_nome: nome,
+        cliente_telefone: telefone,
         status_pagamento: "pendente",
         itens: itens
       };
 
-      const respPedido = await fetch(`${API_URL}/pedidos/publico`, {
+      // Tenta rota pública direta
+      let respPedido = await fetch(`${API_URL}/pedidos/publico`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payloadPedido)
       });
+
+      // Fallback para rota /pedidos caso a rota seja a raiz
+      if (respPedido.status === 404) {
+        respPedido = await fetch(`${API_URL}/pedidos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadPedido)
+        });
+      }
 
       if (respPedido.ok) {
         const ped = await respPedido.json();
