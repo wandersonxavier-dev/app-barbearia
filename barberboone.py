@@ -270,3 +270,34 @@ def marcar_como_entregue(
         "message": "Pedido marcado como ENTREGUE e itens reduzidos do estoque com sucesso.",
         "pedido_id": pedido.id,
     }
+
+
+@app.patch("/pedidos/{pedido_id}/cancelar", tags=["Pedidos"])
+def cancelar_pedido(
+    pedido_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    pedido = (
+        db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
+    )
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    if pedido.status_pedido == models.StatusPedido.CANCELADO:
+        raise HTTPException(
+            status_code=400, detail="Este pedido já está cancelado."
+        )
+
+    # Se o pedido já havia sido entregue, devolve a quantidade para o estoque
+    if pedido.status_pedido == models.StatusPedido.ENTREGUE:
+        for item in pedido.itens:
+            item.produto.quantidade_estoque += item.quantidade
+
+    pedido.status_pedido = models.StatusPedido.CANCELADO
+    db.commit()
+
+    return {
+        "message": "Pedido cancelado com sucesso.",
+        "pedido_id": pedido.id,
+    }
