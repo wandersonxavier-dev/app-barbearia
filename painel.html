@@ -213,12 +213,27 @@
         <label style="font-size: 13px;">Quantidade em Estoque:</label>
         <input type="number" id="produto-estoque" placeholder="Ex: 10">
 
-        <label style="font-size: 13px;">Foto do Produto (Câmera ou Galeria):</label>
-        <input type="file" id="produto-foto-input" accept="image/*" onchange="processarFotoProduto(event)">
+        <label style="font-size: 13px; font-weight: bold; display: block; margin-top: 10px;">Foto do Produto:</label>
+
+        <!-- Inputs de arquivo invisíveis -->
+        <input type="file" id="input-camera" accept="image/*" capture="environment" style="display: none;" onchange="processarFotoProduto(event)">
+        <input type="file" id="input-galeria" accept="image/*" style="display: none;" onchange="processarFotoProduto(event)">
+
+        <!-- Botões para Câmera e Galeria -->
+        <div style="display: flex; gap: 10px; margin: 8px 0 12px 0;">
+          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 10px;" onclick="document.getElementById('input-camera').click()">
+            📷 Tirar Foto
+          </button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 10px;" onclick="document.getElementById('input-galeria').click()">
+            📁 Galeria
+          </button>
+        </div>
 
         <!-- Prévia da Foto -->
-        <div style="text-align: center; margin-bottom: 12px;">
-          <img id="preview-foto" src="" alt="Prévia da foto" style="display: none; width: 90px; height: 90px; border-radius: 8px; object-fit: cover; margin: 0 auto; border: 2px solid #f39c12;">
+        <div id="box-preview-foto" style="display: none; text-align: center; margin-bottom: 12px;">
+          <img id="preview-foto" src="" alt="Prévia da foto" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid #f39c12; display: inline-block;">
+          <br>
+          <button type="button" class="btn-action btn-danger" style="margin-top: 6px; padding: 4px 8px; font-size: 11px;" onclick="removerFoto()">❌ Remover Foto</button>
         </div>
 
         <div style="display: flex; gap: 8px;">
@@ -499,6 +514,13 @@
     }
   }
 
+  function removerFoto() {
+    imagemBase64 = "";
+    document.getElementById("input-camera").value = "";
+    document.getElementById("input-galeria").value = "";
+    document.getElementById("box-preview-foto").style.display = "none";
+  }
+
   function processarFotoProduto(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -508,7 +530,6 @@
       const img = new Image();
       img.src = e.target.result;
       img.onload = function() {
-        // Redimensiona para manter o banco leve (máximo 400x400)
         const canvas = document.createElement("canvas");
         const maxDim = 400;
         let width = img.width;
@@ -531,13 +552,13 @@
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Compacta para JPEG leve
+        // Compacta para JPEG otimizado
         imagemBase64 = canvas.toDataURL("image/jpeg", 0.7);
 
         // Mostra preview
         const preview = document.getElementById("preview-foto");
         preview.src = imagemBase64;
-        preview.style.display = "block";
+        document.getElementById("box-preview-foto").style.display = "block";
       };
     };
     reader.readAsDataURL(file);
@@ -629,12 +650,13 @@
     document.getElementById("produto-estoque").value = prod.quantidade_estoque;
 
     imagemBase64 = prod.imagem_url || "";
+    const boxPreview = document.getElementById("box-preview-foto");
     const preview = document.getElementById("preview-foto");
     if (imagemBase64) {
       preview.src = imagemBase64;
-      preview.style.display = "block";
+      boxPreview.style.display = "block";
     } else {
-      preview.style.display = "none";
+      boxPreview.style.display = "none";
     }
 
     document.getElementById("form-produto-titulo").innerText = "✏ Editar Produto";
@@ -648,10 +670,7 @@
     document.getElementById("produto-nome").value = "";
     document.getElementById("produto-preco").value = "";
     document.getElementById("produto-estoque").value = "";
-    document.getElementById("produto-foto-input").value = "";
-
-    imagemBase64 = "";
-    document.getElementById("preview-foto").style.display = "none";
+    removerFoto();
 
     document.getElementById("form-produto-titulo").innerText = "➕ Cadastrar Novo Produto";
     document.getElementById("btn-salvar-produto").innerText = "Salvar Produto";
