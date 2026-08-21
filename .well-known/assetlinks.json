@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "app.vercel.app_barbearia_seven_livid.twa",
-        "sha256_cert_fingerprints": ["A0:B0:0C:5A:19:D4:92:82:61:6F:3D:80:13:F3:85:6C:BF:B5:D4:4B:A5:63:9F:BB:75:0B:4D:00:34:CE:5D:27"]
+        "sha256_cert_fingerprints": ["9B:9E:8C:AF:04:06:7C:0E:CB:71:36:41:17:B7:DE:94:DC:81:3E:31:1A:49:5A:AA:C7:9C:2C:4C:32:8D:EC:49"]
       }
     }]
