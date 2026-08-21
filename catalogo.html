@@ -351,6 +351,16 @@
     });
   }
 
+  function formatarErroApi(err) {
+    if (!err) return "Erro desconhecido.";
+    if (typeof err.detail === "string") return err.detail;
+    if (Array.isArray(err.detail)) {
+      return err.detail.map(e => `${e.loc ? e.loc.join('.') + ': ' : ''}${e.msg}`).join('\n');
+    }
+    if (typeof err.detail === "object") return JSON.stringify(err.detail);
+    return JSON.stringify(err);
+  }
+
   async function enviarPedido() {
     const nome = document.getElementById("cliente-nome").value.trim();
     const telefone = document.getElementById("cliente-telefone").value.trim();
@@ -382,16 +392,24 @@
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
+      // 1. Cadastra ou busca cliente
       const respCliente = await fetch(`${API_URL}/clientes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nome, telefone })
       });
+
+      if (!respCliente.ok) {
+        const errCli = await respCliente.json();
+        throw new Error(`Erro ao registrar cliente: ${formatarErroApi(errCli)}`);
+      }
+
       const clienteData = await respCliente.json();
 
+      // 2. Cria o pedido
       const payloadPedido = {
         cliente_id: clienteData.id,
-        status_pagamento: "pendente", // Todo pedido entra como pendente por segurança
+        status_pagamento: "pendente",
         itens: itens
       };
 
@@ -414,11 +432,11 @@
 
         window.location.href = "/catalogo.html";
       } else {
-        const err = await respPedido.json();
-        alert(`Erro ao criar pedido: ${err.detail || 'Tente novamente'}`);
+        const errPed = await respPedido.json();
+        alert(`Erro ao criar pedido:\n${formatarErroApi(errPed)}`);
       }
     } catch (e) {
-      alert("Erro ao conectar com o servidor.");
+      alert(e.message || "Erro ao conectar com o servidor.");
     } finally {
       btn.innerText = "Finalizar Pedido";
       btn.disabled = false;
