@@ -467,8 +467,9 @@
             </div>
           </div>
           <div style="display: flex; gap: 6px;">
-            <button class="btn-action btn-share" onclick="compartilharProduto(${p.id}, '${p.nome}', ${p.preco})">🔗 Link</button>
-            <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏</button>
+            <button class="btn-action btn-share" title="Compartilhar Link" onclick="compartilharProduto(${p.id}, '${p.nome}', ${p.preco})">🔗 Link</button>
+            <button class="btn-action btn-edit" title="Editar Produto" onclick="prepararEdicao(${p.id})">✏</button>
+            <button class="btn-action btn-danger" title="Excluir Produto" onclick="excluirProduto(${p.id}, '${p.nome}')">🗑</button>
           </div>
         </div>
       `;
@@ -528,6 +529,31 @@
       }
     } catch (e) {
       alert("Erro de conexão ao salvar produto.");
+    }
+  }
+
+  async function excluirProduto(id, nome) {
+    if (!confirm(`Tem certeza que deseja excluir o produto "${nome}"? Esta ação removerá o item do catálogo dos clientes.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/produtos/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${tokenJWT}`
+        }
+      });
+
+      if (response.ok) {
+        alert("Produto excluído com sucesso!");
+        carregarProdutosPainel();
+      } else {
+        const err = await response.json();
+        alert(`Erro ao excluir: ${err.detail || 'Não foi possível remover o produto'}`);
+      }
+    } catch (e) {
+      alert("Erro de conexão ao excluir produto.");
     }
   }
 
