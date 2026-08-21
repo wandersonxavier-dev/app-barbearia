@@ -1,0 +1,16 @@
+{
+  "name": "Barber Boone - Painel",
+  "short_name": "BarberBoone",
+  "start_url": "/painel.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#f39c12",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2821/2821012.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
