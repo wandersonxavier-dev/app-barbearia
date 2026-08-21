@@ -95,6 +95,10 @@
       border-left-color: #2ecc71;
       opacity: 0.7;
     }
+    .card-item.cancelado {
+      border-left-color: #7f8c8d;
+      opacity: 0.5;
+    }
     .badge {
       display: inline-block;
       padding: 3px 8px;
@@ -105,6 +109,7 @@
     }
     .badge-solicitado { background: #e67e22; color: #fff; }
     .badge-entregue { background: #27ae60; color: #fff; }
+    .badge-cancelado { background: #7f8c8d; color: #fff; }
     .badge-pendente { background: #c0392b; color: #fff; }
     .badge-pago { background: #2980b9; color: #fff; }
     .itens-lista {
@@ -410,15 +415,20 @@
       }).join("");
 
       const isEntregue = p.status_pedido === "entregue";
+      const isCancelado = p.status_pedido === "cancelado";
       const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
 
+      let statusClasse = "";
+      if (isEntregue) statusClasse = "entregue";
+      if (isCancelado) statusClasse = "cancelado";
+
       return `
-        <div class="card-item ${isEntregue ? 'entregue' : ''}">
+        <div class="card-item ${statusClasse}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <h3 style="margin: 0; font-size: 16px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
-              ${clienteTel ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 WhatsApp</a>` : ''}
+              ${clienteTel && !isCancelado ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 WhatsApp</a>` : ''}
             </div>
             <div>
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
@@ -429,9 +439,13 @@
             ${itensHtml}
             <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">Total: R$ ${total.toFixed(2)}</div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <small style="color: #777;">${new Date(p.data_criacao).toLocaleString('pt-BR')}</small>
-            ${!isEntregue ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar e Abater Estoque</button>` : '<span style="color: #2ecc71; font-weight: bold;">✔ Entregue</span>'}
+            <div style="display: flex; gap: 6px;">
+              ${!isEntregue && !isCancelado ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar e Abater Estoque</button>` : ''}
+              ${!isCancelado ? `<button class="btn-action btn-danger" onclick="cancelarPedido(${p.id})">✖ Cancelar Pedido</button>` : '<span style="color: #7f8c8d; font-weight: bold;">Cancelado</span>'}
+              ${isEntregue ? '<span style="color: #2ecc71; font-weight: bold; margin-left: 4px;">✔ Entregue</span>' : ''}
+            </div>
           </div>
         </div>
       `;
@@ -449,9 +463,31 @@
 
       if (response.ok) {
         carregarPedidos();
+        carregarProdutosPainel();
       } else {
         const err = await response.json();
         alert(`Erro: ${err.detail || 'Falha ao atualizar'}`);
+      }
+    } catch (e) {
+      alert("Erro ao conectar com a API.");
+    }
+  }
+
+  async function cancelarPedido(pedidoId) {
+    if (!confirm(`Deseja realmente cancelar o Pedido #${pedidoId}? Se ele já tiver sido entregue, o estoque será devolvido automaticamente.`)) return;
+
+    try {
+      const response = await fetch(`${API_URL}/pedidos/${pedidoId}/cancelar`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+
+      if (response.ok) {
+        carregarPedidos();
+        carregarProdutosPainel();
+      } else {
+        const err = await response.json();
+        alert(`Erro: ${err.detail || 'Falha ao cancelar pedido'}`);
       }
     } catch (e) {
       alert("Erro ao conectar com a API.");
@@ -552,7 +588,7 @@
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Compacta para JPEG otimizado
+        // Compacta para JPEG leve
         imagemBase64 = canvas.toDataURL("image/jpeg", 0.7);
 
         // Mostra preview
