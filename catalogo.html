@@ -166,12 +166,13 @@
       border: 1px dashed #f39c12;
     }
     .pix-box img {
-      width: 140px;
-      height: 140px;
+      width: 160px;
+      height: 160px;
       background: #fff;
       padding: 6px;
       border-radius: 6px;
       margin: 8px 0;
+      object-fit: contain;
     }
     .spacer {
       height: 320px;
@@ -200,7 +201,7 @@
     </div>
     <div class="form-group">
       <label for="cliente-telefone">Seu WhatsApp (com DDD):</label>
-      <input type="tel" id="cliente-telefone" placeholder="Ex: 11999998888">
+      <input type="tel" id="cliente-telefone" placeholder="Ex: 27999998888">
     </div>
     <div class="form-group">
       <label for="pagamento">Forma de Pagamento:</label>
@@ -210,11 +211,11 @@
       </select>
     </div>
 
-    <!-- ÁREA DINÂMICA DO PIX -->
+    <!-- ÁREA DO PIX -->
     <div class="pix-box" id="pix-box">
       <div style="font-size: 13px; font-weight: bold; color: #f39c12;">Escaneie o QR Code ou Copie a Chave:</div>
       <img id="img-pix-qr" src="" alt="QR Code PIX">
-      <input type="text" id="pix-key-display" readonly style="text-align: center; font-weight: bold; color: #2ecc71; background: #1a1a1a; font-size: 12px;">
+      <input type="text" id="pix-key-display" readonly style="text-align: center; font-weight: bold; color: #2ecc71; background: #1a1a1a; font-size: 13px;">
       <button type="button" class="btn-pix-copy" onclick="copiarPix()">📋 Copiar Chave PIX</button>
       <small style="font-size: 11px; color: #888; display: block; margin-top: 6px;">Após pagar, conclua o pedido para enviar o comprovante via WhatsApp.</small>
     </div>
@@ -227,10 +228,11 @@
   const API_URL = "https://app-barbearia-api.onrender.com";
 
   // ==========================================
-  // CONFIGURAÇÕES DO BARBEIRO (ALTERE AQUI)
+  // CONFIGURAÇÕES DO BARBEIRO
   // ==========================================
-  const CHAVE_PIX_BARBEIRO = "COLE_AQUI_A_CHAVE_PIX";
-  const WHATSAPP_BARBEIRO = "5511999999999"; // Formato: 55 + DDD + Número (apenas números)
+  const CHAVE_PIX_BARBEIRO = "27997834019";
+  const QR_CODE_PIX_URL = "https://i.imgur.com/LYFvFkx.png";
+  const WHATSAPP_BARBEIRO = "5527997834019";
   // ==========================================
 
   let produtos = [];
@@ -337,8 +339,7 @@
 
     if (opcao === "pix") {
       pixBox.style.display = "block";
-      const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(CHAVE_PIX_BARBEIRO)}&size=200`;
-      document.getElementById("img-pix-qr").src = qrUrl;
+      document.getElementById("img-pix-qr").src = QR_CODE_PIX_URL;
     } else {
       pixBox.style.display = "none";
     }
@@ -347,7 +348,7 @@
   function copiarPix() {
     const chave = document.getElementById("pix-key-display").value;
     navigator.clipboard.writeText(chave).then(() => {
-      alert("Chave PIX copiada para a área de transferência!");
+      alert("Chave PIX (número de telefone) copiada para a área de transferência!");
     });
   }
 
@@ -392,7 +393,7 @@
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
-      // Etapa 1: Registra ou obtém o ID do cliente via rota pública
+      // Etapa 1: Registra ou obtém o cliente existente
       const respCliente = await fetch(`${API_URL}/clientes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
