@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Barbeiro - Pedidos</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #f39c12;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 22px;
+    }
+    .btn-refresh {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .login-box {
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 40px;
+      text-align: center;
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: white;
+      border-radius: 4px;
+    }
+    .btn-main {
+      background-color: #f39c12;
+      color: #121212;
+      border: none;
+      padding: 12px 20px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 95%;
+      margin-top: 10px;
+    }
+    .card-pedido {
+      background: #1e1e1e;
+      border-left: 4px solid #f39c12;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .card-pedido.entregue {
+      border-left-color: #2ecc71;
+      opacity: 0.7;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-solicitado { background: #e67e22; color: #fff; }
+    .badge-entregue { background: #27ae60; color: #fff; }
+    .badge-pendente { background: #c0392b; color: #fff; }
+    .badge-pago { background: #2980b9; color: #fff; }
+    .itens-lista {
+      margin: 12px 0;
+      background: #252525;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn-entregar {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-whatsapp {
+      background-color: #25d366;
+      color: #121212;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      display: inline-block;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- TELA DE LOGIN -->
+  <div id="secao-login" class="login-box">
+    <h2>🔐 Acesso do Barbeiro</h2>
+    <input type="email" id="login-email" placeholder="E-mail" value="barbeiro@gmail.com"><br>
+    <input type="password" id="login-senha" placeholder="Senha" value="123"><br>
+    <button class="btn-main" onclick="fazerLogin()">Entrar no Painel</button>
+  </div>
+
+  <!-- TELA PRINCIPAL -->
+  <div id="secao-pedidos" style="display: none;">
+    <h1>
+      📦 Pedidos Recebidos
+      <button class="btn-refresh" onclick="carregarPedidos()">🔄 Atualizar</button>
+    </h1>
+    <div id="lista-pedidos">Carregando pedidos...</div>
+  </div>
+
+</div>
+
+<script>
+  const API_URL = "http://127.0.0.1:8000";
+  let tokenJWT = localStorage.getItem("token_barbeiro") || "";
+
+  async function fazerLogin() {
+    const email = document.getElementById("login-email").value;
+    const senha = document.getElementById("login-senha").value;
+
+    const formData = new URLSearchParams();
+    formData.append("username", email);
+    formData.append("password", senha);
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        tokenJWT = data.access_token;
+        localStorage.setItem("token_barbeiro", tokenJWT);
+        iniciarPainel();
+      } else {
+        alert("E-mail ou senha incorretos.");
+      }
+    } catch (e) {
+      alert("Erro ao conectar com a API.");
+    }
+  }
+
+  function iniciarPainel() {
+    document.getElementById("secao-login").style.display = "none";
+    document.getElementById("secao-pedidos").style.display = "block";
+    carregarPedidos();
+  }
+
+  async function carregarPedidos() {
+    try {
+      const response = await fetch(`${API_URL}/pedidos`, {
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+
+      if (response.status === 401) {
+        alert("Sessão expirada. Faça login novamente.");
+        localStorage.removeItem("token_barbeiro");
+        document.getElementById("secao-login").style.display = "block";
+        document.getElementById("secao-pedidos").style.display = "none";
+        return;
+      }
+
+      const pedidos = await response.json();
+      renderizarPedidos(pedidos);
+    } catch (e) {
+      document.getElementById("lista-pedidos").innerHTML = "<p style='color: red;'>Erro ao buscar pedidos.</p>";
+    }
+  }
+
+  function renderizarPedidos(pedidos) {
+    const container = document.getElementById("lista-pedidos");
+    if (pedidos.length === 0) {
+      container.innerHTML = "<p>Nenhum pedido recebido até o momento.</p>";
+      return;
+    }
+
+    container.innerHTML = pedidos.map(p => {
+      let total = 0;
+      const clienteNome = p.cliente ? p.cliente.nome : `Cliente #${p.cliente_id}`;
+      const clienteTel = p.cliente ? p.cliente.telefone : "";
+
+      const itensHtml = p.itens.map(item => {
+        const subtotal = item.quantidade * item.preco_unitario;
+        total += subtotal;
+        const nomeProd = item.produto ? item.produto.nome : `Produto #${item.produto_id}`;
+        return `<div>• <b>${nomeProd}</b> — ${item.quantidade}x (R$ ${item.preco_unitario.toFixed(2)})</div>`;
+      }).join("");
+
+      const isEntregue = p.status_pedido === "entregue";
+
+      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na barbearia no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
+      const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
+
+      return `
+        <div class="card-pedido ${isEntregue ? 'entregue' : ''}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h3 style="margin: 0; font-size: 17px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
+              ${clienteTel ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 Chamar no WhatsApp</a>` : ''}
+            </div>
+            <div>
+              <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
+              <span class="badge badge-${p.status_pagamento}">${p.status_pagamento}</span>
+            </div>
+          </div>
+
+          <div class="itens-lista">
+            ${itensHtml}
+            <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">
+              Total: R$ ${total.toFixed(2)}
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <small style="color: #777;">${new Date(p.data_criacao).toLocaleString('pt-BR')}</small>
+            ${!isEntregue ? `<button class="btn-entregar" onclick="entregarPedido(${p.id})">✔ Marcar como Entregue</button>` : '<span style="color: #2ecc71; font-weight: bold;">✔ Entregue</span>'}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function entregarPedido(pedidoId) {
+    if (!confirm(`Deseja entregar o pedido #${pedidoId} e abater os itens do estoque?`)) return;
+
+    try {
+      const response = await fetch(`${API_URL}/pedidos/${pedidoId}/entregar`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+
+      if (response.ok) {
+        alert(`Pedido #${pedidoId} marcado como entregue com sucesso!`);
+        carregarPedidos();
+      } else {
+        const err = await response.json();
+        alert(`Erro: ${err.detail || 'Não foi possível atualizar o pedido'}`);
+      }
+    } catch (e) {
+      alert("Erro ao conectar com a API.");
+    }
+  }
+
+  if (tokenJWT) {
+    iniciarPainel();
+  }
+</script>
+</body>
+</html>
