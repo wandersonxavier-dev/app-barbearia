@@ -213,8 +213,13 @@
         <label style="font-size: 13px;">Quantidade em Estoque:</label>
         <input type="number" id="produto-estoque" placeholder="Ex: 10">
 
-        <label style="font-size: 13px;">Link da Foto do Produto (URL):</label>
-        <input type="url" id="produto-imagem" placeholder="https://i.imgur.com/...png">
+        <label style="font-size: 13px;">Foto do Produto (Câmera ou Galeria):</label>
+        <input type="file" id="produto-foto-input" accept="image/*" onchange="processarFotoProduto(event)">
+
+        <!-- Prévia da Foto -->
+        <div style="text-align: center; margin-bottom: 12px;">
+          <img id="preview-foto" src="" alt="Prévia da foto" style="display: none; width: 90px; height: 90px; border-radius: 8px; object-fit: cover; margin: 0 auto; border: 2px solid #f39c12;">
+        </div>
 
         <div style="display: flex; gap: 8px;">
           <button class="btn-main" id="btn-salvar-produto" onclick="salvarProduto()">Salvar Produto</button>
@@ -234,6 +239,7 @@
   const CATALOGO_BASE_URL = window.location.origin + "/catalogo.html";
   let tokenJWT = localStorage.getItem("token_barbeiro") || "";
   let produtosLocais = [];
+  let imagemBase64 = "";
 
   function alternarTelaAuth(tela) {
     if (tela === "cadastro") {
@@ -493,21 +499,74 @@
     }
   }
 
+  function processarFotoProduto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = function() {
+        // Redimensiona para manter o banco leve (máximo 400x400)
+        const canvas = document.createElement("canvas");
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compacta para JPEG leve
+        imagemBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+        // Mostra preview
+        const preview = document.getElementById("preview-foto");
+        preview.src = imagemBase64;
+        preview.style.display = "block";
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function salvarProduto() {
     const id = document.getElementById("produto-id").value;
     const nome = document.getElementById("produto-nome").value.trim();
     const preco = parseFloat(document.getElementById("produto-preco").value);
     const estoque = parseInt(document.getElementById("produto-estoque").value);
-    const imagem_url = document.getElementById("produto-imagem").value.trim();
 
     if (!nome || isNaN(preco) || isNaN(estoque)) {
       alert("Preencha todos os campos numéricos obrigatórios.");
       return;
     }
 
-    const payload = { nome, preco, quantidade_estoque: estoque, imagem_url };
+    const payload = {
+      nome,
+      preco,
+      quantidade_estoque: estoque,
+      imagem_url: imagemBase64 || "https://i.imgur.com/LYFvFkx.png"
+    };
+
     const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
     const method = id ? "PUT" : "POST";
+
+    const btn = document.getElementById("btn-salvar-produto");
+    btn.innerText = "Salvando...";
+    btn.disabled = true;
 
     try {
       const response = await fetch(url, {
@@ -529,6 +588,9 @@
       }
     } catch (e) {
       alert("Erro de conexão ao salvar produto.");
+    } finally {
+      btn.innerText = id ? "Salvar Alterações" : "Salvar Produto";
+      btn.disabled = false;
     }
   }
 
@@ -565,7 +627,15 @@
     document.getElementById("produto-nome").value = prod.nome;
     document.getElementById("produto-preco").value = prod.preco;
     document.getElementById("produto-estoque").value = prod.quantidade_estoque;
-    document.getElementById("produto-imagem").value = prod.imagem_url || "";
+
+    imagemBase64 = prod.imagem_url || "";
+    const preview = document.getElementById("preview-foto");
+    if (imagemBase64) {
+      preview.src = imagemBase64;
+      preview.style.display = "block";
+    } else {
+      preview.style.display = "none";
+    }
 
     document.getElementById("form-produto-titulo").innerText = "✏ Editar Produto";
     document.getElementById("btn-salvar-produto").innerText = "Salvar Alterações";
@@ -578,7 +648,10 @@
     document.getElementById("produto-nome").value = "";
     document.getElementById("produto-preco").value = "";
     document.getElementById("produto-estoque").value = "";
-    document.getElementById("produto-imagem").value = "";
+    document.getElementById("produto-foto-input").value = "";
+
+    imagemBase64 = "";
+    document.getElementById("preview-foto").style.display = "none";
 
     document.getElementById("form-produto-titulo").innerText = "➕ Cadastrar Novo Produto";
     document.getElementById("btn-salvar-produto").innerText = "Salvar Produto";

@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import relationship
 
@@ -51,6 +52,7 @@ class Produto(Base):
     nome = Column(String(100), nullable=False)
     preco = Column(Float, nullable=False)
     quantidade_estoque = Column(Integer, default=0)
+    imagem_url = Column(Text, nullable=True)  # Suporta tanto URLs normais quanto fotos em Base64
 
 
 class Pedido(Base):
