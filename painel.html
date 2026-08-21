@@ -3,49 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel do Barbeiro - Pedidos</title>
+  <title>Painel do Barbeiro</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: #121212;
       color: #e0e0e0;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
     }
     .container {
       max-width: 700px;
       margin: 0 auto;
     }
-    h1 {
-      color: #f39c12;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 22px;
-    }
-    .btn-refresh {
-      background: #333;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
+    .login-box, .card-item {
+      background: #1e1e1e;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
     .login-box {
-      background: #1e1e1e;
-      padding: 20px;
-      border-radius: 8px;
       margin-top: 40px;
       text-align: center;
     }
-    input {
-      width: 90%;
+    input, select {
+      width: 100%;
       padding: 10px;
-      margin: 8px 0;
+      margin: 6px 0 12px 0;
       background: #2a2a2a;
       border: 1px solid #444;
       color: white;
       border-radius: 4px;
+      box-sizing: border-box;
     }
     .btn-main {
       background-color: #f39c12;
@@ -55,18 +45,31 @@
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
-      width: 95%;
-      margin-top: 10px;
+      width: 100%;
     }
-    .card-pedido {
-      background: #1e1e1e;
-      border-left: 4px solid #f39c12;
-      padding: 16px;
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
       margin-bottom: 16px;
-      border-radius: 6px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
-    .card-pedido.entregue {
+    .nav-btn {
+      flex: 1;
+      padding: 10px;
+      background: #2a2a2a;
+      color: #aaa;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .nav-btn.active {
+      background: #f39c12;
+      color: #121212;
+    }
+    .card-item {
+      border-left: 4px solid #f39c12;
+    }
+    .card-item.entregue {
       border-left-color: #2ecc71;
       opacity: 0.7;
     }
@@ -89,15 +92,17 @@
       border-radius: 4px;
       font-size: 14px;
     }
-    .btn-entregar {
-      background-color: #27ae60;
-      color: white;
+    .btn-action {
       border: none;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
+      font-size: 13px;
     }
+    .btn-green { background-color: #27ae60; color: white; }
+    .btn-danger { background-color: #e74c3c; color: white; }
+    .btn-edit { background-color: #3498db; color: white; }
     .btn-whatsapp {
       background-color: #25d366;
       color: #121212;
@@ -115,21 +120,53 @@
 
 <div class="container">
 
-  <!-- TELA DE LOGIN -->
+  <!-- LOGIN -->
   <div id="secao-login" class="login-box">
     <h2>🔐 Acesso do Barbeiro</h2>
-    <input type="email" id="login-email" placeholder="E-mail" value="barbeiro@gmail.com"><br>
-    <input type="password" id="login-senha" placeholder="Senha" value="123"><br>
+    <input type="email" id="login-email" placeholder="E-mail" value="barbeiro@gmail.com">
+    <input type="password" id="login-senha" placeholder="Senha" value="123">
     <button class="btn-main" onclick="fazerLogin()">Entrar no Painel</button>
   </div>
 
-  <!-- TELA PRINCIPAL -->
-  <div id="secao-pedidos" style="display: none;">
-    <h1>
-      📦 Pedidos Recebidos
-      <button class="btn-refresh" onclick="carregarPedidos()">🔄 Atualizar</button>
-    </h1>
-    <div id="lista-pedidos">Carregando pedidos...</div>
+  <!-- PAINEL -->
+  <div id="secao-painel" style="display: none;">
+    <div class="nav-tabs">
+      <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
+      <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos & Estoque</button>
+    </div>
+
+    <!-- ABA DE PEDIDOS -->
+    <div id="aba-pedidos">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin: 0; font-size: 20px;">Pedidos Recebidos</h2>
+        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
+      </div>
+      <div id="lista-pedidos">Carregando pedidos...</div>
+    </div>
+
+    <!-- ABA DE PRODUTOS -->
+    <div id="aba-produtos" style="display: none;">
+      <div class="card-item" style="border-left-color: #3498db;">
+        <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
+        <input type="hidden" id="produto-id">
+        <label style="font-size: 13px;">Nome do Produto:</label>
+        <input type="text" id="produto-nome" placeholder="Ex: Pomada Efeito Seco">
+
+        <label style="font-size: 13px;">Preço (R$):</label>
+        <input type="number" step="0.01" id="produto-preco" placeholder="Ex: 35.00">
+
+        <label style="font-size: 13px;">Quantidade em Estoque:</label>
+        <input type="number" id="produto-estoque" placeholder="Ex: 10">
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-main" id="btn-salvar-produto" onclick="salvarProduto()">Salvar Produto</button>
+          <button class="btn-action btn-danger" id="btn-cancelar-edicao" style="display: none;" onclick="resetarFormularioProduto()">Cancelar</button>
+        </div>
+      </div>
+
+      <h3 style="font-size: 18px;">Produtos no Catálogo</h3>
+      <div id="lista-produtos">Carregando produtos...</div>
+    </div>
   </div>
 
 </div>
@@ -137,6 +174,7 @@
 <script>
   const API_URL = "https://app-barbearia-api.onrender.com";
   let tokenJWT = localStorage.getItem("token_barbeiro") || "";
+  let produtosLocais = [];
 
   async function fazerLogin() {
     const email = document.getElementById("login-email").value;
@@ -168,10 +206,27 @@
 
   function iniciarPainel() {
     document.getElementById("secao-login").style.display = "none";
-    document.getElementById("secao-pedidos").style.display = "block";
+    document.getElementById("secao-painel").style.display = "block";
     carregarPedidos();
   }
 
+  function alternarAba(aba) {
+    if (aba === "pedidos") {
+      document.getElementById("aba-pedidos").style.display = "block";
+      document.getElementById("aba-produtos").style.display = "none";
+      document.getElementById("tab-pedidos-btn").classList.add("active");
+      document.getElementById("tab-produtos-btn").classList.remove("active");
+      carregarPedidos();
+    } else {
+      document.getElementById("aba-pedidos").style.display = "none";
+      document.getElementById("aba-produtos").style.display = "block";
+      document.getElementById("tab-produtos-btn").classList.add("active");
+      document.getElementById("tab-pedidos-btn").classList.remove("active");
+      carregarProdutosPainel();
+    }
+  }
+
+  // --- GESTÃO DE PEDIDOS ---
   async function carregarPedidos() {
     try {
       const response = await fetch(`${API_URL}/pedidos`, {
@@ -181,8 +236,7 @@
       if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
         localStorage.removeItem("token_barbeiro");
-        document.getElementById("secao-login").style.display = "block";
-        document.getElementById("secao-pedidos").style.display = "none";
+        location.reload();
         return;
       }
 
@@ -213,33 +267,28 @@
       }).join("");
 
       const isEntregue = p.status_pedido === "entregue";
-
-      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na barbearia no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
+      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
 
       return `
-        <div class="card-pedido ${isEntregue ? 'entregue' : ''}">
+        <div class="card-item ${isEntregue ? 'entregue' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <h3 style="margin: 0; font-size: 17px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
-              ${clienteTel ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 Chamar no WhatsApp</a>` : ''}
+              <h3 style="margin: 0; font-size: 16px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
+              ${clienteTel ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 WhatsApp</a>` : ''}
             </div>
             <div>
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
               <span class="badge badge-${p.status_pagamento}">${p.status_pagamento}</span>
             </div>
           </div>
-
           <div class="itens-lista">
             ${itensHtml}
-            <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">
-              Total: R$ ${total.toFixed(2)}
-            </div>
+            <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">Total: R$ ${total.toFixed(2)}</div>
           </div>
-
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <small style="color: #777;">${new Date(p.data_criacao).toLocaleString('pt-BR')}</small>
-            ${!isEntregue ? `<button class="btn-entregar" onclick="entregarPedido(${p.id})">✔ Marcar como Entregue</button>` : '<span style="color: #2ecc71; font-weight: bold;">✔ Entregue</span>'}
+            ${!isEntregue ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar e Abater Estoque</button>` : '<span style="color: #2ecc71; font-weight: bold;">✔ Entregue</span>'}
           </div>
         </div>
       `;
@@ -247,7 +296,7 @@
   }
 
   async function entregarPedido(pedidoId) {
-    if (!confirm(`Deseja entregar o pedido #${pedidoId} e abater os itens do estoque?`)) return;
+    if (!confirm(`Deseja entregar o pedido #${pedidoId} e abater do estoque?`)) return;
 
     try {
       const response = await fetch(`${API_URL}/pedidos/${pedidoId}/entregar`, {
@@ -256,15 +305,110 @@
       });
 
       if (response.ok) {
-        alert(`Pedido #${pedidoId} marcado como entregue com sucesso!`);
         carregarPedidos();
       } else {
         const err = await response.json();
-        alert(`Erro: ${err.detail || 'Não foi possível atualizar o pedido'}`);
+        alert(`Erro: ${err.detail || 'Falha ao atualizar'}`);
       }
     } catch (e) {
       alert("Erro ao conectar com a API.");
     }
+  }
+
+  // --- GESTÃO DE PRODUTOS ---
+  async function carregarProdutosPainel() {
+    try {
+      const response = await fetch(`${API_URL}/produtos/catalogo`);
+      produtosLocais = await response.json();
+      renderizarProdutosPainel();
+    } catch (e) {
+      document.getElementById("lista-produtos").innerHTML = "<p style='color: red;'>Erro ao buscar produtos.</p>";
+    }
+  }
+
+  function renderizarProdutosPainel() {
+    const container = document.getElementById("lista-produtos");
+    if (produtosLocais.length === 0) {
+      container.innerHTML = "<p>Nenhum produto cadastrado.</p>";
+      return;
+    }
+
+    container.innerHTML = produtosLocais.map(p => `
+      <div class="card-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h4 style="margin: 0 0 4px 0;">${p.nome}</h4>
+          <span style="color: #2ecc71; font-weight: bold;">R$ ${p.preco.toFixed(2)}</span> |
+          <small style="color: #aaa;">Estoque: <b>${p.quantidade_estoque}</b></small>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏ Editar</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function salvarProduto() {
+    const id = document.getElementById("produto-id").value;
+    const nome = document.getElementById("produto-nome").value.trim();
+    const preco = parseFloat(document.getElementById("produto-preco").value);
+    const estoque = parseInt(document.getElementById("produto-estoque").value);
+
+    if (!nome || isNaN(preco) || isNaN(estoque)) {
+      alert("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    const payload = { nome, preco, quantidade_estoque: estoque };
+    const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
+    const method = id ? "PUT" : "POST";
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        alert(id ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
+        resetarFormularioProduto();
+        carregarProdutosPainel();
+      } else {
+        const err = await response.json();
+        alert(`Erro: ${err.detail || 'Não foi possível salvar o produto'}`);
+      }
+    } catch (e) {
+      alert("Erro de conexão ao salvar produto.");
+    }
+  }
+
+  function prepararEdicao(id) {
+    const prod = produtosLocais.find(p => p.id === id);
+    if (!prod) return;
+
+    document.getElementById("produto-id").value = prod.id;
+    document.getElementById("produto-nome").value = prod.nome;
+    document.getElementById("produto-preco").value = prod.preco;
+    document.getElementById("produto-estoque").value = prod.quantidade_estoque;
+
+    document.getElementById("form-produto-titulo").innerText = "✏ Editar Produto";
+    document.getElementById("btn-salvar-produto").innerText = "Salvar Alterações";
+    document.getElementById("btn-cancelar-edicao").style.display = "inline-block";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetarFormularioProduto() {
+    document.getElementById("produto-id").value = "";
+    document.getElementById("produto-nome").value = "";
+    document.getElementById("produto-preco").value = "";
+    document.getElementById("produto-estoque").value = "";
+
+    document.getElementById("form-produto-titulo").innerText = "➕ Cadastrar Novo Produto";
+    document.getElementById("btn-salvar-produto").innerText = "Salvar Produto";
+    document.getElementById("btn-cancelar-edicao").style.display = "none";
   }
 
   if (tokenJWT) {
