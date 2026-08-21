@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo de Produtos - Barbearia</title>
+  <title>Catálogo - Barber Boone</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -16,11 +16,22 @@
       max-width: 500px;
       margin: 0 auto;
     }
+    .header-logo {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header-logo img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #f39c12;
+    }
     h1 {
       text-align: center;
       color: #f39c12;
       font-size: 22px;
-      margin-bottom: 4px;
+      margin: 8px 0 4px 0;
     }
     p.subtitulo {
       text-align: center;
@@ -32,26 +43,40 @@
     .card {
       background-color: #1e1e1e;
       border-radius: 8px;
-      padding: 14px;
+      padding: 12px;
       margin-bottom: 12px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
+    .card-img {
+      width: 65px;
+      height: 65px;
+      border-radius: 8px;
+      object-fit: cover;
+      background-color: #2a2a2a;
+      margin-right: 12px;
+    }
+    .card-info {
+      flex: 1;
+    }
     .card-info h3 {
-      margin: 0 0 6px 0;
-      font-size: 16px;
+      margin: 0 0 4px 0;
+      font-size: 15px;
     }
     .card-info p {
       margin: 0;
       color: #2ecc71;
       font-weight: bold;
-      font-size: 15px;
+      font-size: 14px;
     }
     .card-info small {
       color: #888;
-      font-size: 12px;
+      font-size: 11px;
+    }
+    .card-controls {
+      display: flex;
+      align-items: center;
     }
     .btn-qty {
       background-color: #333;
@@ -66,7 +91,7 @@
     .qty-display {
       margin: 0 8px;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 15px;
     }
     .footer-checkout {
       position: fixed;
@@ -118,10 +143,14 @@
 <body>
 
 <div class="container">
-  <h1>💈 Catálogo de Produtos</h1>
-  <p class="subtitulo">Faça seu pedido e retire na barbearia</p>
+  <!-- LOGO -->
+  <div class="header-logo">
+    <img src="https://cdn-icons-png.flaticon.com/512/2821/2821012.png" alt="Logo Barbearia">
+    <h1>💈 Barber Boone</h1>
+    <p class="subtitulo">Faça seu pedido e retire na barbearia</p>
+  </div>
 
-  <div id="produtos-lista">Carregando produtos...</div>
+  <div id="produtos-lista">Carregando catálogo...</div>
   <div class="spacer"></div>
 </div>
 
@@ -152,7 +181,6 @@
   let produtos = [];
   let carrinho = {};
 
-  // Recupera dados salvos do cliente no navegador se ele já pediu antes
   document.getElementById("cliente-nome").value = localStorage.getItem("cliente_nome") || "";
   document.getElementById("cliente-telefone").value = localStorage.getItem("cliente_tel") || "";
 
@@ -162,31 +190,35 @@
       produtos = await response.json();
       renderizarProdutos();
     } catch (error) {
-      document.getElementById("produtos-lista").innerHTML = "<p style='color: red;'>Erro ao carregar catálogo. Aguarde alguns instantes e recarregue a página.</p>";
+      document.getElementById("produtos-lista").innerHTML = "<p style='color: red;'>Erro ao carregar catálogo.</p>";
     }
   }
 
   function renderizarProdutos() {
     const container = document.getElementById("produtos-lista");
     if (produtos.length === 0) {
-      container.innerHTML = "<p style='text-align: center; color: #888;'>Nenhum produto disponível no momento.</p>";
+      container.innerHTML = "<p style='text-align: center; color: #888;'>Nenhum produto disponível.</p>";
       return;
     }
 
-    container.innerHTML = produtos.map(p => `
-      <div class="card">
-        <div class="card-info">
-          <h3>${p.nome}</h3>
-          <p>R$ ${p.preco.toFixed(2)}</p>
-          <small>Estoque: ${p.quantidade_estoque}</small>
+    container.innerHTML = produtos.map(p => {
+      const foto = p.imagem_url || "https://cdn-icons-png.flaticon.com/512/2821/2821012.png";
+      return `
+        <div class="card">
+          <img src="${foto}" class="card-img" alt="${p.nome}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2821/2821012.png'">
+          <div class="card-info">
+            <h3>${p.nome}</h3>
+            <p>R$ ${p.preco.toFixed(2)}</p>
+            <small>Estoque: ${p.quantidade_estoque}</small>
+          </div>
+          <div class="card-controls">
+            <button class="btn-qty" onclick="alterarQtd(${p.id}, -1)">-</button>
+            <span class="qty-display" id="qty-${p.id}">${carrinho[p.id] || 0}</span>
+            <button class="btn-qty" onclick="alterarQtd(${p.id}, 1, ${p.quantidade_estoque})">+</button>
+          </div>
         </div>
-        <div>
-          <button class="btn-qty" onclick="alterarQtd(${p.id}, -1)">-</button>
-          <span class="qty-display" id="qty-${p.id}">${carrinho[p.id] || 0}</span>
-          <button class="btn-qty" onclick="alterarQtd(${p.id}, 1, ${p.quantidade_estoque})">+</button>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   function alterarQtd(id, delta, maxEstoque) {
@@ -218,7 +250,7 @@
     const telefone = document.getElementById("cliente-telefone").value.trim();
 
     if (!nome || !telefone) {
-      alert("Por favor, preencha seu Nome e WhatsApp antes de finalizar.");
+      alert("Preencha Nome e WhatsApp antes de finalizar.");
       return;
     }
 
@@ -230,7 +262,7 @@
       }));
 
     if (itens.length === 0) {
-      alert("Adicione pelo menos 1 item ao carrinho.");
+      alert("Adicione pelo menos 1 item.");
       return;
     }
 
@@ -239,11 +271,9 @@
     btn.disabled = true;
 
     try {
-      // Salva os dados no celular do cliente para ele não ter que redigitar na próxima compra
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
-      // 1. Cadastra/Identifica o cliente na API
       const respCliente = await fetch(`${API_URL}/clientes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -251,7 +281,6 @@
       });
       const clienteData = await respCliente.json();
 
-      // 2. Cria o pedido vinculado ao cliente
       const payloadPedido = {
         cliente_id: clienteData.id,
         status_pagamento: document.getElementById("pagamento").value,
@@ -266,14 +295,14 @@
 
       if (respPedido.ok) {
         const ped = await respPedido.json();
-        alert(`🎉 Pedido #${ped.id} enviado com sucesso!\nO barbeiro já recebeu sua solicitação e vai separar seus produtos.`);
+        alert(`🎉 Pedido #${ped.id} enviado com sucesso!`);
         window.location.reload();
       } else {
         const err = await respPedido.json();
         alert(`Erro ao criar pedido: ${err.detail || 'Tente novamente'}`);
       }
     } catch (e) {
-      alert("Erro ao conectar ao servidor. Tente novamente.");
+      alert("Erro ao conectar com o servidor.");
     } finally {
       btn.innerText = "Finalizar Pedido";
       btn.disabled = false;

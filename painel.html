@@ -17,6 +17,17 @@
       max-width: 700px;
       margin: 0 auto;
     }
+    .header-logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header-logo img {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #f39c12;
+    }
     .auth-box, .card-item {
       background: #1e1e1e;
       padding: 20px;
@@ -25,7 +36,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
     .auth-box {
-      margin-top: 30px;
+      margin-top: 20px;
       text-align: center;
     }
     input, select {
@@ -125,16 +136,28 @@
       display: inline-block;
       margin-top: 6px;
     }
+    .prod-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      background-color: #333;
+      margin-right: 12px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
 
+  <!-- CABEÇALHO COM LOGO -->
+  <div class="header-logo">
+    <img id="app-logo" src="https://cdn-icons-png.flaticon.com/512/2821/2821012.png" alt="Logo Barbearia">
+    <h2 style="margin: 8px 0 0 0; font-size: 18px; color: #f39c12;">Barber Boone</h2>
+  </div>
+
   <!-- TELA DE AUTENTICAÇÃO -->
   <div id="secao-auth">
-
-    <!-- FORMULÁRIO DE LOGIN -->
     <div id="box-login" class="auth-box">
       <h2>🔐 Acesso do Barbeiro</h2>
       <input type="email" id="login-email" placeholder="Seu e-mail" value="barbeiro@gmail.com">
@@ -144,7 +167,6 @@
       <span class="link-toggle" onclick="alternarTelaAuth('cadastro')">Não tem conta? Cadastre-se aqui</span>
     </div>
 
-    <!-- FORMULÁRIO DE CADASTRO -->
     <div id="box-cadastro" class="auth-box" style="display: none;">
       <h2>✂ Criar Conta de Barbeiro</h2>
       <input type="text" id="cad-nome" placeholder="Seu Nome Completo">
@@ -154,17 +176,16 @@
       <br>
       <span class="link-toggle" onclick="alternarTelaAuth('login')">Já possui cadastro? Fazer login</span>
     </div>
-
   </div>
 
-  <!-- TELA PRINCIPAL (PAINEL LOGADO) -->
+  <!-- PAINEL LOGADO -->
   <div id="secao-painel" style="display: none;">
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
       <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos & Estoque</button>
     </div>
 
-    <!-- ABA DE PEDIDOS -->
+    <!-- ABA PEDIDOS -->
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 20px;">Pedidos Recebidos</h2>
@@ -176,11 +197,12 @@
       <div id="lista-pedidos">Carregando pedidos...</div>
     </div>
 
-    <!-- ABA DE PRODUTOS -->
+    <!-- ABA PRODUTOS -->
     <div id="aba-produtos" style="display: none;">
       <div class="card-item" style="border-left-color: #3498db;">
         <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
         <input type="hidden" id="produto-id">
+
         <label style="font-size: 13px;">Nome do Produto:</label>
         <input type="text" id="produto-nome" placeholder="Ex: Pomada Efeito Seco">
 
@@ -189,6 +211,9 @@
 
         <label style="font-size: 13px;">Quantidade em Estoque:</label>
         <input type="number" id="produto-estoque" placeholder="Ex: 10">
+
+        <label style="font-size: 13px;">Link da Foto do Produto (URL):</label>
+        <input type="url" id="produto-imagem" placeholder="https://exemplo.com/foto.jpg">
 
         <div style="display: flex; gap: 8px;">
           <button class="btn-main" id="btn-salvar-produto" onclick="salvarProduto()">Salvar Produto</button>
@@ -229,7 +254,7 @@
     }
 
     const btn = document.getElementById("btn-cadastrar");
-    btn.innerText = "Criando conta... aguarde";
+    btn.innerText = "Criando conta...";
     btn.disabled = true;
 
     try {
@@ -240,16 +265,16 @@
       });
 
       if (response.ok) {
-        alert("Conta criada com sucesso! Agora faça seu login.");
+        alert("Conta criada com sucesso! Faça seu login.");
         document.getElementById("login-email").value = email;
         document.getElementById("login-senha").value = senha;
         alternarTelaAuth("login");
       } else {
         const err = await response.json();
-        alert(`Erro ao cadastrar: ${err.detail || 'Verifique os dados digitados'}`);
+        alert(`Erro: ${err.detail || 'Verifique os dados digitados'}`);
       }
     } catch (e) {
-      alert("Erro ao conectar com o servidor. Se ele estiver acordando, aguarde 20 segundos e tente novamente.");
+      alert("Erro ao conectar ao servidor.");
     } finally {
       btn.innerText = "Criar Minha Conta";
       btn.disabled = false;
@@ -266,7 +291,7 @@
     }
 
     const btn = document.getElementById("btn-login");
-    btn.innerText = "Entrando... aguarde";
+    btn.innerText = "Entrando...";
     btn.disabled = true;
 
     const formData = new URLSearchParams();
@@ -286,10 +311,10 @@
         localStorage.setItem("token_barbeiro", tokenJWT);
         iniciarPainel();
       } else {
-        alert("E-mail ou senha incorretos. Caso a API tenha reiniciado, clique em 'Não tem conta? Cadastre-se aqui'.");
+        alert("E-mail ou senha incorretos.");
       }
     } catch (e) {
-      alert("Erro ao conectar com a API. O servidor pode estar acordando, aguarde 20 segundos e tente novamente.");
+      alert("Erro ao conectar com o servidor.");
     } finally {
       btn.innerText = "Entrar no Painel";
       btn.disabled = false;
@@ -323,7 +348,6 @@
     }
   }
 
-  // --- GESTÃO DE PEDIDOS ---
   async function carregarPedidos() {
     try {
       const response = await fetch(`${API_URL}/pedidos`, {
@@ -411,7 +435,6 @@
     }
   }
 
-  // --- GESTÃO DE PRODUTOS ---
   async function carregarProdutosPainel() {
     try {
       const response = await fetch(`${API_URL}/produtos/catalogo`);
@@ -429,18 +452,24 @@
       return;
     }
 
-    container.innerHTML = produtosLocais.map(p => `
-      <div class="card-item" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h4 style="margin: 0 0 4px 0;">${p.nome}</h4>
-          <span style="color: #2ecc71; font-weight: bold;">R$ ${p.preco.toFixed(2)}</span> |
-          <small style="color: #aaa;">Estoque: <b>${p.quantidade_estoque}</b></small>
+    container.innerHTML = produtosLocais.map(p => {
+      const foto = p.imagem_url || "https://cdn-icons-png.flaticon.com/512/2821/2821012.png";
+      return `
+        <div class="card-item" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center;">
+            <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2821/2821012.png'">
+            <div>
+              <h4 style="margin: 0 0 4px 0;">${p.nome}</h4>
+              <span style="color: #2ecc71; font-weight: bold;">R$ ${p.preco.toFixed(2)}</span> |
+              <small style="color: #aaa;">Estoque: <b>${p.quantidade_estoque}</b></small>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏ Editar</button>
+          </div>
         </div>
-        <div style="display: flex; gap: 6px;">
-          <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏ Editar</button>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   async function salvarProduto() {
@@ -448,13 +477,14 @@
     const nome = document.getElementById("produto-nome").value.trim();
     const preco = parseFloat(document.getElementById("produto-preco").value);
     const estoque = parseInt(document.getElementById("produto-estoque").value);
+    const imagem_url = document.getElementById("produto-imagem").value.trim();
 
     if (!nome || isNaN(preco) || isNaN(estoque)) {
-      alert("Preencha todos os campos corretamente.");
+      alert("Preencha todos os campos numéricos obrigatórios.");
       return;
     }
 
-    const payload = { nome, preco, quantidade_estoque: estoque };
+    const payload = { nome, preco, quantidade_estoque: estoque, imagem_url };
     const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
     const method = id ? "PUT" : "POST";
 
@@ -489,6 +519,7 @@
     document.getElementById("produto-nome").value = prod.nome;
     document.getElementById("produto-preco").value = prod.preco;
     document.getElementById("produto-estoque").value = prod.quantidade_estoque;
+    document.getElementById("produto-imagem").value = prod.imagem_url || "";
 
     document.getElementById("form-produto-titulo").innerText = "✏ Editar Produto";
     document.getElementById("btn-salvar-produto").innerText = "Salvar Alterações";
@@ -501,6 +532,7 @@
     document.getElementById("produto-nome").value = "";
     document.getElementById("produto-preco").value = "";
     document.getElementById("produto-estoque").value = "";
+    document.getElementById("produto-imagem").value = "";
 
     document.getElementById("form-produto-titulo").innerText = "➕ Cadastrar Novo Produto";
     document.getElementById("btn-salvar-produto").innerText = "Salvar Produto";
