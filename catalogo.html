@@ -48,6 +48,13 @@
       display: flex;
       align-items: center;
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      transition: border 0.3s ease, transform 0.3s ease;
+      border: 2px solid transparent;
+    }
+    .card.destaque-url {
+      border: 2px solid #f39c12;
+      transform: scale(1.02);
+      box-shadow: 0 0 15px rgba(243, 156, 18, 0.4);
     }
     .card-img {
       width: 65px;
@@ -142,11 +149,13 @@
 </head>
 <body>
 
-<div class="header-logo">
-  <img src="https://i.imgur.com/LYFvFkx.png" alt="Logo Barbearia">
-  <h1>💈 Barber Boone</h1>
-  <p class="subtitulo">Faça seu pedido e retire na barbearia</p>
-</div>
+<div class="container">
+  <!-- LOGO -->
+  <div class="header-logo">
+    <img src="https://i.imgur.com/LYFvFkx.png" alt="Logo Barbearia">
+    <h1>💈 Barber Boone</h1>
+    <p class="subtitulo">Faça seu pedido e retire na barbearia</p>
+  </div>
 
   <div id="produtos-lista">Carregando catálogo...</div>
   <div class="spacer"></div>
@@ -187,6 +196,7 @@
       const response = await fetch(`${API_URL}/produtos/catalogo`);
       produtos = await response.json();
       renderizarProdutos();
+      verificarParametroUrl();
     } catch (error) {
       document.getElementById("produtos-lista").innerHTML = "<p style='color: red;'>Erro ao carregar catálogo.</p>";
     }
@@ -200,10 +210,10 @@
     }
 
     container.innerHTML = produtos.map(p => {
-      const foto = p.imagem_url || "https://cdn-icons-png.flaticon.com/512/2821/2821012.png";
+      const foto = p.imagem_url || "https://i.imgur.com/LYFvFkx.png";
       return `
-        <div class="card">
-          <img src="${foto}" class="card-img" alt="${p.nome}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2821/2821012.png'">
+        <div class="card" id="card-prod-${p.id}">
+          <img src="${foto}" class="card-img" alt="${p.nome}" onerror="this.src='https://i.imgur.com/LYFvFkx.png'">
           <div class="card-info">
             <h3>${p.nome}</h3>
             <p>R$ ${p.preco.toFixed(2)}</p>
@@ -219,6 +229,26 @@
     }).join("");
   }
 
+  function verificarParametroUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const prodId = parseInt(urlParams.get('produto'));
+
+    if (prodId) {
+      const prod = produtos.find(p => p.id === prodId);
+      if (prod && prod.quantidade_estoque > 0) {
+        alterarQtd(prodId, 1, prod.quantidade_estoque);
+
+        setTimeout(() => {
+          const el = document.getElementById(`card-prod-${prodId}`);
+          if (el) {
+            el.classList.add('destaque-url');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }
+
   function alterarQtd(id, delta, maxEstoque) {
     const atual = carrinho[id] || 0;
     const novo = atual + delta;
@@ -230,7 +260,8 @@
     }
 
     carrinho[id] = novo;
-    document.getElementById(`qty-${id}`).innerText = novo;
+    const el = document.getElementById(`qty-${id}`);
+    if (el) el.innerText = novo;
     atualizarTotal();
   }
 
@@ -294,7 +325,7 @@
       if (respPedido.ok) {
         const ped = await respPedido.json();
         alert(`🎉 Pedido #${ped.id} enviado com sucesso!`);
-        window.location.reload();
+        window.location.href = "/catalogo.html";
       } else {
         const err = await respPedido.json();
         alert(`Erro ao criar pedido: ${err.detail || 'Tente novamente'}`);

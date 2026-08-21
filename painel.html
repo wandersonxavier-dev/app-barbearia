@@ -125,6 +125,7 @@
     .btn-green { background-color: #27ae60; color: white; }
     .btn-danger { background-color: #e74c3c; color: white; }
     .btn-edit { background-color: #3498db; color: white; }
+    .btn-share { background-color: #e67e22; color: white; }
     .btn-whatsapp {
       background-color: #25d366;
       color: #121212;
@@ -150,13 +151,13 @@
 
 <div class="container">
 
-  <!-- CABEÇALHO COM LOGO -->
+  <!-- CABEÇALHO -->
   <div class="header-logo">
-  <img id="app-logo" src="https://i.imgur.com/LYFvFkx.png" alt="Logo Barbearia">
-  <h2 style="margin: 8px 0 0 0; font-size: 18px; color: #f39c12;">Barber Boone</h2>
-</div>
+    <img id="app-logo" src="https://i.imgur.com/LYFvFkx.png" alt="Logo Barbearia">
+    <h2 style="margin: 8px 0 0 0; font-size: 18px; color: #f39c12;">Barber Boone</h2>
+  </div>
 
-  <!-- TELA DE AUTENTICAÇÃO -->
+  <!-- AUTENTICAÇÃO -->
   <div id="secao-auth">
     <div id="box-login" class="auth-box">
       <h2>🔐 Acesso do Barbeiro</h2>
@@ -178,14 +179,14 @@
     </div>
   </div>
 
-  <!-- PAINEL LOGADO -->
+  <!-- PAINEL -->
   <div id="secao-painel" style="display: none;">
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
       <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos & Estoque</button>
     </div>
 
-    <!-- ABA PEDIDOS -->
+    <!-- PEDIDOS -->
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 20px;">Pedidos Recebidos</h2>
@@ -197,7 +198,7 @@
       <div id="lista-pedidos">Carregando pedidos...</div>
     </div>
 
-    <!-- ABA PRODUTOS -->
+    <!-- PRODUTOS -->
     <div id="aba-produtos" style="display: none;">
       <div class="card-item" style="border-left-color: #3498db;">
         <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
@@ -213,7 +214,7 @@
         <input type="number" id="produto-estoque" placeholder="Ex: 10">
 
         <label style="font-size: 13px;">Link da Foto do Produto (URL):</label>
-        <input type="url" id="produto-imagem" placeholder="https://exemplo.com/foto.jpg">
+        <input type="url" id="produto-imagem" placeholder="https://i.imgur.com/...png">
 
         <div style="display: flex; gap: 8px;">
           <button class="btn-main" id="btn-salvar-produto" onclick="salvarProduto()">Salvar Produto</button>
@@ -230,6 +231,7 @@
 
 <script>
   const API_URL = "https://app-barbearia-api.onrender.com";
+  const CATALOGO_BASE_URL = window.location.origin + "/catalogo.html";
   let tokenJWT = localStorage.getItem("token_barbeiro") || "";
   let produtosLocais = [];
 
@@ -453,11 +455,11 @@
     }
 
     container.innerHTML = produtosLocais.map(p => {
-      const foto = p.imagem_url || "https://cdn-icons-png.flaticon.com/512/2821/2821012.png";
+      const foto = p.imagem_url || "https://i.imgur.com/LYFvFkx.png";
       return `
         <div class="card-item" style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center;">
-            <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2821/2821012.png'">
+            <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://i.imgur.com/LYFvFkx.png'">
             <div>
               <h4 style="margin: 0 0 4px 0;">${p.nome}</h4>
               <span style="color: #2ecc71; font-weight: bold;">R$ ${p.preco.toFixed(2)}</span> |
@@ -465,11 +467,29 @@
             </div>
           </div>
           <div style="display: flex; gap: 6px;">
-            <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏ Editar</button>
+            <button class="btn-action btn-share" onclick="compartilharProduto(${p.id}, '${p.nome}', ${p.preco})">🔗 Link</button>
+            <button class="btn-action btn-edit" onclick="prepararEdicao(${p.id})">✏</button>
           </div>
         </div>
       `;
     }).join("");
+  }
+
+  function compartilharProduto(id, nome, preco) {
+    const link = `${CATALOGO_BASE_URL}?produto=${id}`;
+    const texto = `Confira nosso produto *${nome}* por apenas *R$ ${preco.toFixed(2)}* na Barber Boone! Peça pelo link direto: ${link}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: nome,
+        text: texto,
+        url: link
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(link).then(() => {
+        alert(`Link copiado para a área de transferência!\n\n${link}`);
+      });
+    }
   }
 
   async function salvarProduto() {
