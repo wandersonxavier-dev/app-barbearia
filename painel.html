@@ -17,26 +17,27 @@
       max-width: 700px;
       margin: 0 auto;
     }
-    .login-box, .card-item {
+    .auth-box, .card-item {
       background: #1e1e1e;
-      padding: 16px;
+      padding: 20px;
       border-radius: 8px;
       margin-bottom: 16px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
-    .login-box {
-      margin-top: 40px;
+    .auth-box {
+      margin-top: 30px;
       text-align: center;
     }
     input, select {
       width: 100%;
-      padding: 10px;
-      margin: 6px 0 12px 0;
+      padding: 12px;
+      margin: 6px 0 14px 0;
       background: #2a2a2a;
       border: 1px solid #444;
       color: white;
       border-radius: 4px;
       box-sizing: border-box;
+      font-size: 14px;
     }
     .btn-main {
       background-color: #f39c12;
@@ -47,6 +48,15 @@
       border-radius: 6px;
       cursor: pointer;
       width: 100%;
+      font-size: 15px;
+    }
+    .link-toggle {
+      color: #f39c12;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 14px;
+      display: inline-block;
+      text-decoration: underline;
     }
     .nav-tabs {
       display: flex;
@@ -121,15 +131,33 @@
 
 <div class="container">
 
-  <!-- LOGIN -->
-  <div id="secao-login" class="login-box">
-    <h2>🔐 Acesso do Barbeiro</h2>
-    <input type="email" id="login-email" placeholder="E-mail" value="barbeiro@gmail.com">
-    <input type="password" id="login-senha" placeholder="Senha" value="123">
-    <button class="btn-main" onclick="fazerLogin()">Entrar no Painel</button>
+  <!-- TELA DE AUTENTICAÇÃO -->
+  <div id="secao-auth">
+
+    <!-- FORMULÁRIO DE LOGIN -->
+    <div id="box-login" class="auth-box">
+      <h2>🔐 Acesso do Barbeiro</h2>
+      <input type="email" id="login-email" placeholder="Seu e-mail" value="barbeiro@gmail.com">
+      <input type="password" id="login-senha" placeholder="Sua senha" value="123">
+      <button class="btn-main" id="btn-login" onclick="fazerLogin()">Entrar no Painel</button>
+      <br>
+      <span class="link-toggle" onclick="alternarTelaAuth('cadastro')">Não tem conta? Cadastre-se aqui</span>
+    </div>
+
+    <!-- FORMULÁRIO DE CADASTRO -->
+    <div id="box-cadastro" class="auth-box" style="display: none;">
+      <h2>✂ Criar Conta de Barbeiro</h2>
+      <input type="text" id="cad-nome" placeholder="Seu Nome Completo">
+      <input type="email" id="cad-email" placeholder="Seu E-mail de Acesso">
+      <input type="password" id="cad-senha" placeholder="Crie uma Senha">
+      <button class="btn-main" id="btn-cadastrar" onclick="cadastrarBarbeiro()">Criar Minha Conta</button>
+      <br>
+      <span class="link-toggle" onclick="alternarTelaAuth('login')">Já possui cadastro? Fazer login</span>
+    </div>
+
   </div>
 
-  <!-- PAINEL -->
+  <!-- TELA PRINCIPAL (PAINEL LOGADO) -->
   <div id="secao-painel" style="display: none;">
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
@@ -140,7 +168,10 @@
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 20px;">Pedidos Recebidos</h2>
-        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
+          <button class="btn-action btn-danger" onclick="fazerLogout()">Sair</button>
+        </div>
       </div>
       <div id="lista-pedidos">Carregando pedidos...</div>
     </div>
@@ -177,9 +208,66 @@
   let tokenJWT = localStorage.getItem("token_barbeiro") || "";
   let produtosLocais = [];
 
+  function alternarTelaAuth(tela) {
+    if (tela === "cadastro") {
+      document.getElementById("box-login").style.display = "none";
+      document.getElementById("box-cadastro").style.display = "block";
+    } else {
+      document.getElementById("box-login").style.display = "block";
+      document.getElementById("box-cadastro").style.display = "none";
+    }
+  }
+
+  async function cadastrarBarbeiro() {
+    const nome = document.getElementById("cad-nome").value.trim();
+    const email = document.getElementById("cad-email").value.trim();
+    const senha = document.getElementById("cad-senha").value.trim();
+
+    if (!nome || !email || !senha) {
+      alert("Por favor, preencha todos os campos.");
+      return;
+    }
+
+    const btn = document.getElementById("btn-cadastrar");
+    btn.innerText = "Criando conta... aguarde";
+    btn.disabled = true;
+
+    try {
+      const response = await fetch(`${API_URL}/usuarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email, senha })
+      });
+
+      if (response.ok) {
+        alert("Conta criada com sucesso! Agora faça seu login.");
+        document.getElementById("login-email").value = email;
+        document.getElementById("login-senha").value = senha;
+        alternarTelaAuth("login");
+      } else {
+        const err = await response.json();
+        alert(`Erro ao cadastrar: ${err.detail || 'Verifique os dados digitados'}`);
+      }
+    } catch (e) {
+      alert("Erro ao conectar com o servidor. Se ele estiver acordando, tente novamente em alguns segundos.");
+    } finally {
+      btn.innerText = "Criar Minha Conta";
+      btn.disabled = false;
+    }
+  }
+
   async function fazerLogin() {
-    const email = document.getElementById("login-email").value;
-    const senha = document.getElementById("login-senha").value;
+    const email = document.getElementById("login-email").value.trim();
+    const senha = document.getElementById("login-senha").value.trim();
+
+    if (!email || !senha) {
+      alert("Preencha e-mail e senha.");
+      return;
+    }
+
+    const btn = document.getElementById("btn-login");
+    btn.innerText = "Entrando... aguarde";
+    btn.disabled = true;
 
     const formData = new URLSearchParams();
     formData.append("username", email);
@@ -198,15 +286,23 @@
         localStorage.setItem("token_barbeiro", tokenJWT);
         iniciarPainel();
       } else {
-        alert("E-mail ou senha incorretos.");
+        alert("E-mail ou senha incorretos. Caso a API tenha reiniciado, clique em 'Não tem conta? Cadastre-se aqui'.");
       }
     } catch (e) {
-      alert("Erro ao conectar com a API.");
+      alert("Erro ao conectar com a API. O servidor pode estar acordando, aguarde 20 segundos e tente novamente.");
+    } finally {
+      btn.innerText = "Entrar no Painel";
+      btn.disabled = false;
     }
   }
 
+  function fazerLogout() {
+    localStorage.removeItem("token_barbeiro");
+    location.reload();
+  }
+
   function iniciarPainel() {
-    document.getElementById("secao-login").style.display = "none";
+    document.getElementById("secao-auth").style.display = "none";
     document.getElementById("secao-painel").style.display = "block";
     carregarPedidos();
   }
@@ -236,8 +332,7 @@
 
       if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
-        localStorage.removeItem("token_barbeiro");
-        location.reload();
+        fazerLogout();
         return;
       }
 
