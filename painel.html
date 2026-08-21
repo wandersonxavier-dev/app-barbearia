@@ -233,7 +233,7 @@
     btn.disabled = true;
 
     try {
-      const response = await fetch(`${API_URL}/usuarios`, {
+      const response = await fetch(`${API_URL}/auth/cadastro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nome, email, senha })
@@ -249,7 +249,7 @@
         alert(`Erro ao cadastrar: ${err.detail || 'Verifique os dados digitados'}`);
       }
     } catch (e) {
-      alert("Erro ao conectar com o servidor. Se ele estiver acordando, tente novamente em alguns segundos.");
+      alert("Erro ao conectar com o servidor. Se ele estiver acordando, aguarde 20 segundos e tente novamente.");
     } finally {
       btn.innerText = "Criar Minha Conta";
       btn.disabled = false;
