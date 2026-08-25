@@ -214,6 +214,56 @@
       border: 1px solid #222;
     }
 
+    /* CARDS DE FATURAMENTO / MARCADORES */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (min-width: 500px) {
+      .metric-grid.grid-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .metric-card {
+      background: #191919;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid #2a2a2a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .metric-card.green {
+      border-left: 4px solid #2ecc71;
+    }
+    .metric-card.red {
+      border-left: 4px solid #e74c3c;
+    }
+    .metric-title {
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 0.5px;
+    }
+    .metric-value {
+      font-size: 20px;
+      font-weight: 800;
+      margin-top: 4px;
+      color: #fff;
+    }
+
+    /* ACCORDION / MINIMIZAR CAIXA */
+    .collapse-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
     /* GRIDS RESPONSIVOS */
     .form-row {
       display: grid;
@@ -271,6 +321,14 @@
 
     <!-- 1. ABA PEDIDOS -->
     <div id="aba-pedidos">
+      <!-- Marcador de Faturamento de Pedidos Pagos -->
+      <div class="metric-grid">
+        <div class="metric-card green">
+          <span class="metric-title">💰 Vendas Pagas à Vista (Pedidos)</span>
+          <span class="metric-value" id="faturamento-pedidos-pago">R$ 0,00</span>
+        </div>
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">Pedidos Recebidos</h2>
         <div style="display: flex; gap: 8px;">
@@ -331,47 +389,65 @@
 
     <!-- 3. ABA CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
+      <!-- Marcadores de Faturamento do Crediário -->
+      <div class="metric-grid grid-2">
+        <div class="metric-card red">
+          <span class="metric-title">🔴 Total a Receber (Crediário)</span>
+          <span class="metric-value" id="faturamento-cred-aberto" style="color: #ff5e57;">R$ 0,00</span>
+        </div>
+        <div class="metric-card green">
+          <span class="metric-title">🟢 Já Recebido (Crediário Quitado)</span>
+          <span class="metric-value" id="faturamento-cred-pago" style="color: #2ecc71;">R$ 0,00</span>
+        </div>
+      </div>
+
+      <!-- Caixa Retrátil de Lançamento Manual -->
       <div class="card-item" style="border-left-color: #e74c3c;">
-        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento no Crediário</h3>
-
-        <div class="form-row grid-2">
-          <div>
-            <label>WhatsApp / Telefone:</label>
-            <input type="tel" id="cred-telefone" placeholder="Ex: 27999998888" onblur="verificarClientePorTelefone(this.value)">
-          </div>
-          <div>
-            <label>Nome do Cliente:</label>
-            <input type="text" id="cred-nome" placeholder="Preenchido automático ou digite">
-          </div>
+        <div class="collapse-header" onclick="alternarCaixaNovoCrediario()">
+          <h3 style="margin: 0; color: #e74c3c; font-size: 16px;">➕ Novo Lançamento no Crediário</h3>
+          <span id="icone-collapse-cred" style="color: #aaa; font-weight: bold; font-size: 13px;">[+ Expandir]</span>
         </div>
 
-        <div id="cred-aviso-cliente" style="font-size: 12px; color: #2ecc71; margin: -6px 0 10px 0; display: none;"></div>
-
-        <div>
-          <label>Selecione o Produto ou Serviço:</label>
-          <select id="cred-select-produto" onchange="selecionarProdutoCrediario()">
-            <option value="">-- Selecione um produto cadastrado --</option>
-            <option value="outro">➕ [Outro / Serviço Personalizado]</option>
-          </select>
-        </div>
-
-        <div id="box-item-personalizado" style="display: none;">
-          <label>Nome do Serviço ou Item Avulso:</label>
-          <input type="text" id="cred-item-custom" placeholder="Ex: Corte Degrade + Barboterapia">
-        </div>
-
-        <div class="form-row grid-2">
-          <div>
-            <label>Quantidade:</label>
-            <input type="number" id="cred-qtd" value="1" min="1" oninput="calcularTotalLancamento()">
+        <div id="box-form-crediario" style="display: none; margin-top: 14px; border-top: 1px solid #262626; padding-top: 14px;">
+          <div class="form-row grid-2">
+            <div>
+              <label>WhatsApp / Telefone:</label>
+              <input type="tel" id="cred-telefone" placeholder="Ex: 27999998888" onblur="verificarClientePorTelefone(this.value)">
+            </div>
+            <div>
+              <label>Nome do Cliente:</label>
+              <input type="text" id="cred-nome" placeholder="Preenchido automático ou digite">
+            </div>
           </div>
-          <div>
-            <label>Valor Total (R$):</label>
-            <input type="text" id="cred-valor" placeholder="Ex: 35.00">
-          </div>
-        </div>
 
-        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito no Crediário</button>
+          <div id="cred-aviso-cliente" style="font-size: 12px; color: #2ecc71; margin: -6px 0 10px 0; display: none;"></div>
+
+          <div>
+            <label>Selecione o Produto ou Serviço:</label>
+            <select id="cred-select-produto" onchange="selecionarProdutoCrediario()">
+              <option value="">-- Selecione um produto cadastrado --</option>
+              <option value="outro">➕ [Outro / Serviço Personalizado]</option>
+            </select>
+          </div>
+
+          <div id="box-item-personalizado" style="display: none;">
+            <label>Nome do Serviço ou Item Avulso:</label>
+            <input type="text" id="cred-item-custom" placeholder="Ex: Corte Degrade + Barboterapia">
+          </div>
+
+          <div class="form-row grid-2">
+            <div>
+              <label>Quantidade:</label>
+              <input type="number" id="cred-qtd" value="1" min="1" oninput="calcularTotalLancamento()">
+            </div>
+            <div>
+              <label>Valor Total (R$):</label>
+              <input type="text" id="cred-valor" placeholder="Ex: 35.00">
+            </div>
+          </div>
+
+          <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito no Crediário</button>
+        </div>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -517,6 +593,14 @@
     }
   }
 
+  function alternarCaixaNovoCrediario() {
+    const box = document.getElementById("box-form-crediario");
+    const icon = document.getElementById("icone-collapse-cred");
+    const aberto = box.style.display === "block";
+    box.style.display = aberto ? "none" : "block";
+    icon.innerText = aberto ? "[+ Expandir]" : "[- Recolher]";
+  }
+
   async function carregarPedidos() {
     const container = document.getElementById("lista-pedidos");
     try {
@@ -537,10 +621,28 @@
       }
 
       const pedidos = await response.json();
+      atualizarMarcadorFaturamentoPedidos(pedidos);
       renderizarPedidos(pedidos);
     } catch (e) {
       container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
+  }
+
+  function atualizarMarcadorFaturamentoPedidos(pedidos) {
+    let totalPagoAVista = 0;
+    if (Array.isArray(pedidos)) {
+      pedidos.forEach(p => {
+        const isPago = String(p.status_pagamento).toLowerCase() === "pago";
+        const isNaoCancelado = String(p.status_pedido).toLowerCase() !== "cancelado";
+        if (isPago && isNaoCancelado) {
+          (p.itens || []).forEach(it => {
+            totalPagoAVista += (it.quantidade || 0) * (it.preco_unitario || 0);
+          });
+        }
+      });
+    }
+    const elem = document.getElementById("faturamento-pedidos-pago");
+    if (elem) elem.innerText = `R$ ${totalPagoAVista.toFixed(2)}`;
   }
 
   function renderizarPedidos(pedidos) {
@@ -833,10 +935,46 @@
       }
 
       const devedores = await response.json();
+      atualizarMarcadoresCrediario(devedores);
       renderizarCrediario(devedores);
     } catch (e) {
       container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
+  }
+
+  async function atualizarMarcadoresCrediario(devedores) {
+    let totalAberto = 0;
+    if (Array.isArray(devedores)) {
+      devedores.forEach(d => {
+        totalAberto += d.total_divida || 0;
+      });
+    }
+    const elemAberto = document.getElementById("faturamento-cred-aberto");
+    if (elemAberto) elemAberto.innerText = `R$ ${totalAberto.toFixed(2)}`;
+
+    // Busca o total quitado no crediário através da lista de pedidos
+    try {
+      const resp = await fetch(`${API_URL}/pedidos`, {
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+      if (resp.ok) {
+        const todosPedidos = await resp.json();
+        let totalCredPago = 0;
+        todosPedidos.forEach(p => {
+          const isPago = String(p.status_pagamento).toLowerCase() === "pago";
+          const isCrediarioOriginal = (p.itens || []).some(it =>
+            it.produto && String(it.produto.descricao || '').includes("Lançamento manual no crediário")
+          );
+          if (isPago && isCrediarioOriginal) {
+            (p.itens || []).forEach(it => {
+              totalCredPago += (it.quantidade || 0) * (it.preco_unitario || 0);
+            });
+          }
+        });
+        const elemPago = document.getElementById("faturamento-cred-pago");
+        if (elemPago) elemPago.innerText = `R$ ${totalCredPago.toFixed(2)}`;
+      }
+    } catch (e) {}
   }
 
   function renderizarCrediario(devedores) {
