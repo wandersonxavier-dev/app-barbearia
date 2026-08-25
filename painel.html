@@ -934,47 +934,18 @@
         return;
       }
 
-      const devedores = await response.json();
-      atualizarMarcadoresCrediario(devedores);
+      const dados = await response.json();
+      const totalAReceber = dados.total_a_receber !== undefined ? dados.total_a_receber : 0;
+      const totalJaRecebido = dados.total_ja_recebido !== undefined ? dados.total_ja_recebido : 0;
+      const devedores = dados.devedores || [];
+
+      document.getElementById("faturamento-cred-aberto").innerText = `R$ ${totalAReceber.toFixed(2)}`;
+      document.getElementById("faturamento-cred-pago").innerText = `R$ ${totalJaRecebido.toFixed(2)}`;
+
       renderizarCrediario(devedores);
     } catch (e) {
       container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
-  }
-
-  async function atualizarMarcadoresCrediario(devedores) {
-    let totalAberto = 0;
-    if (Array.isArray(devedores)) {
-      devedores.forEach(d => {
-        totalAberto += d.total_divida || 0;
-      });
-    }
-    const elemAberto = document.getElementById("faturamento-cred-aberto");
-    if (elemAberto) elemAberto.innerText = `R$ ${totalAberto.toFixed(2)}`;
-
-    // Busca o total quitado no crediário através da lista de pedidos
-    try {
-      const resp = await fetch(`${API_URL}/pedidos`, {
-        headers: { "Authorization": `Bearer ${tokenJWT}` }
-      });
-      if (resp.ok) {
-        const todosPedidos = await resp.json();
-        let totalCredPago = 0;
-        todosPedidos.forEach(p => {
-          const isPago = String(p.status_pagamento).toLowerCase() === "pago";
-          const isCrediarioOriginal = (p.itens || []).some(it =>
-            it.produto && String(it.produto.descricao || '').includes("Lançamento manual no crediário")
-          );
-          if (isPago && isCrediarioOriginal) {
-            (p.itens || []).forEach(it => {
-              totalCredPago += (it.quantidade || 0) * (it.preco_unitario || 0);
-            });
-          }
-        });
-        const elemPago = document.getElementById("faturamento-cred-pago");
-        if (elemPago) elemPago.innerText = `R$ ${totalCredPago.toFixed(2)}`;
-      }
-    } catch (e) {}
   }
 
   function renderizarCrediario(devedores) {
@@ -991,24 +962,28 @@
       let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus débitos em aberto no Crediário:\n`;
       (d.pedidos || []).forEach(p => {
         const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
-        textoExtrato += `\n• *Lançamento #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
+        const dataTxt = p.data ? ` (${p.data})` : '';
+        textoExtrato += `\n• *Lançamento #${p.pedido_id}*${dataTxt}: R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
       });
       textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`;
 
       const linkCobranca = `https://wa.me/55${zapLimpo}?text=${encodeURIComponent(textoExtrato)}`;
 
-      const pedidosHtml = (d.pedidos || []).map(p => `
-        <div style="border-bottom: 1px solid #292929; padding: 8px 0; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <b>Lançamento #${p.pedido_id}</b> (${p.data}) — <span style="color:#e74c3c; font-weight:bold;">R$ ${p.valor.toFixed(2)}</span>
-            <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
+      const pedidosHtml = (d.pedidos || []).map(p => {
+        const dataTxt = p.data ? ` (${p.data})` : '';
+        return `
+          <div style="border-bottom: 1px solid #292929; padding: 8px 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <b>Lançamento #${p.pedido_id}</b>${dataTxt} — <span style="color:#e74c3c; font-weight:bold;">R$ ${p.valor.toFixed(2)}</span>
+              <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-action btn-edit" title="Editar Valor deste lançamento" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
+              <button class="btn-action btn-green" title="Quitar apenas este lançamento" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
+            </div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-action btn-edit" title="Editar Valor deste lançamento" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
-            <button class="btn-action btn-green" title="Quitar apenas este lançamento" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
 
       return `
         <div class="card-item crediario-card">

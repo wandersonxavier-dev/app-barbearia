@@ -21,7 +21,7 @@ except Exception as e:
     logger.error(f"Erro ao criar tabelas: {e}")
 
 
-# 2. Migração segura para converter as colunas em VARCHAR(50)
+# 2. Migração segura
 def executar_migracoes_seguras():
     try:
         with engine.connect() as conn:
@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.3.1",
+    version="1.3.2",
 )
 
 
@@ -108,7 +108,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ==========================================
 # 1. AUTENTICAÇÃO
 # ==========================================
@@ -121,12 +120,12 @@ app.add_middleware(
     tags=["Autenticação"],
 )
 def cadastrar_barbeiro(
-        dados: schemas.UsuarioCriarSchema, db: Session = Depends(get_db)
+    dados: schemas.UsuarioCriarSchema, db: Session = Depends(get_db)
 ):
     if (
-            db.query(models.Usuario)
-                    .filter(models.Usuario.email == dados.email)
-                    .first()
+        db.query(models.Usuario)
+        .filter(models.Usuario.email == dados.email)
+        .first()
     ):
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
 
@@ -145,8 +144,8 @@ def cadastrar_barbeiro(
     "/auth/login", response_model=schemas.TokenSchema, tags=["Autenticação"]
 )
 def login(
-        form_data: OAuth2PasswordRequestForm = Depends(),
-        db: Session = Depends(get_db),
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     usuario = (
         db.query(models.Usuario)
@@ -154,7 +153,7 @@ def login(
         .first()
     )
     if not usuario or not security.verificar_senha(
-            form_data.password, usuario.senha_hash
+        form_data.password, usuario.senha_hash
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -177,7 +176,7 @@ def login(
     tags=["Clientes"],
 )
 def cadastrar_ou_obter_cliente(
-        dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
+    dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
     cliente_existente = (
         db.query(models.Cliente)
@@ -205,9 +204,9 @@ def cadastrar_ou_obter_cliente(
     tags=["Clientes"],
 )
 def buscar_cliente_por_telefone(
-        telefone: str,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    telefone: str,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     cliente = (
         db.query(models.Cliente)
@@ -225,8 +224,8 @@ def buscar_cliente_por_telefone(
     tags=["Clientes"],
 )
 def listar_clientes(
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     return db.query(models.Cliente).all()
 
@@ -256,9 +255,9 @@ def listar_catalogo_publico(db: Session = Depends(get_db)):
     tags=["Produtos"],
 )
 def cadastrar_produto(
-        dados: schemas.ProdutoCriarSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    dados: schemas.ProdutoCriarSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     novo_produto = models.Produto(**dados.model_dump())
     db.add(novo_produto)
@@ -273,10 +272,10 @@ def cadastrar_produto(
     tags=["Produtos"],
 )
 def atualizar_produto(
-        produto_id: int,
-        dados: schemas.ProdutoCriarSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    produto_id: int,
+    dados: schemas.ProdutoCriarSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     produto = (
         db.query(models.Produto)
@@ -296,9 +295,9 @@ def atualizar_produto(
 
 @app.delete("/produtos/{produto_id}", tags=["Produtos"])
 def excluir_produto(
-        produto_id: int,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    produto_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     produto = (
         db.query(models.Produto)
@@ -320,7 +319,7 @@ def excluir_produto(
 
 @app.post("/pedidos/publico", tags=["Pedidos"])
 def criar_pedido_web(
-        dados: schemas.PedidoCriarPublicoSchema, db: Session = Depends(get_db)
+    dados: schemas.PedidoCriarPublicoSchema, db: Session = Depends(get_db)
 ):
     cliente = (
         db.query(models.Cliente)
@@ -370,9 +369,9 @@ def criar_pedido_web(
 
 @app.post("/pedidos/manual", tags=["Crediário"])
 def lancamento_manual_crediario(
-        dados: schemas.LancamentoManualSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    dados: schemas.LancamentoManualSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         try:
@@ -380,7 +379,6 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente com base no telefone
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -393,7 +391,6 @@ def lancamento_manual_crediario(
         elif dados.nome and cliente.nome != dados.nome:
             cliente.nome = dados.nome
 
-        # 2. Localiza ou cria o produto
         produto = (
             db.query(models.Produto)
             .filter(models.Produto.nome == dados.descricao_item)
@@ -409,7 +406,6 @@ def lancamento_manual_crediario(
             db.add(produto)
             db.flush()
 
-        # 3. Cria o pedido com status fiado e entregue
         pedido = models.Pedido(
             cliente_id=cliente.id,
             status_pagamento="fiado",
@@ -448,9 +444,9 @@ def lancamento_manual_crediario(
 
 @app.post("/fiados/abater", tags=["Crediário"])
 def abater_pagamento_crediario(
-        dados: schemas.AbatimentoCrediarioSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    dados: schemas.AbatimentoCrediarioSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         try:
@@ -461,7 +457,6 @@ def abater_pagamento_crediario(
         if valor_pago <= 0:
             raise HTTPException(status_code=400, detail="O valor de abatimento deve ser maior que zero.")
 
-        # Busca todos os pedidos pendentes no crediário desse cliente em ordem do mais antigo ao mais novo
         pedidos_cliente = (
             db.query(models.Pedido)
             .filter(
@@ -488,25 +483,26 @@ def abater_pagamento_crediario(
             total_pedido = sum((it.quantidade or 0) * (it.preco_unitario or 0.0) for it in p.itens)
 
             if saldo_para_abater >= (total_pedido - 0.001):
-                # Quita o pedido completamente
                 p.status_pagamento = "pago"
                 saldo_para_abater -= total_pedido
             else:
-                # Abate o valor proporcionalmente e reestrutura o item para refletir o saldo real restante
                 restante_pedido = total_pedido - saldo_para_abater
-
-                # Deixa apenas um item consolidado com o saldo restante exato
                 if p.itens:
                     p.itens[0].preco_unitario = round(restante_pedido, 2)
                     p.itens[0].quantidade = 1
-                    # Se haviam mais itens no mesmo pedido, remove os subsequentes para não duplicar valores
                     for item_extra in p.itens[1:]:
                         db.delete(item_extra)
-
                 saldo_para_abater = 0.0
                 break
 
+        # Registra o histórico real do pagamento realizado
+        reg_pagamento = models.PagamentoCrediario(
+            cliente_id=dados.cliente_id,
+            valor_pago=valor_pago
+        )
+        db.add(reg_pagamento)
         db.commit()
+
         return {"message": "Abatimento realizado com sucesso!", "valor_abatido": valor_pago}
     except HTTPException:
         raise
@@ -518,9 +514,9 @@ def abater_pagamento_crediario(
 
 @app.patch("/pedidos/{pedido_id}/mover-crediario", tags=["Crediário"])
 def mover_pedido_para_crediario(
-        pedido_id: int,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    pedido_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
     if not pedido:
@@ -539,10 +535,10 @@ def mover_pedido_para_crediario(
 
 @app.patch("/pedidos/{pedido_id}/valor", tags=["Crediário"])
 def editar_valor_pedido(
-        pedido_id: int,
-        dados: schemas.EditarValorPedidoSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    pedido_id: int,
+    dados: schemas.EditarValorPedidoSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -571,8 +567,8 @@ def editar_valor_pedido(
 
 @app.get("/pedidos", tags=["Pedidos"])
 def listar_pedidos(
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         pedidos_db = (
@@ -640,8 +636,8 @@ def listar_pedidos(
 
 @app.get("/fiados", tags=["Crediário"])
 def listar_crediario(
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         todos_pedidos = (
@@ -654,10 +650,12 @@ def listar_crediario(
             p
             for p in todos_pedidos
             if "fiado" in str(p.status_pagamento).lower()
-               and str(p.status_pedido).lower() != "cancelado"
+            and str(p.status_pedido).lower() != "cancelado"
         ]
 
+        total_a_receber = 0.0
         clientes_crediario = {}
+
         for p in pedidos_crediario:
             cid = p.cliente_id
             if cid not in clientes_crediario:
@@ -688,14 +686,14 @@ def listar_crediario(
                 for item in (p.itens or [])
             )
             clientes_crediario[cid]["total_divida"] += total_pedido
+            total_a_receber += total_pedido
+
+            data_str = p.data_criacao.strftime("%d/%m/%Y %H:%M") if p.data_criacao else ""
+
             clientes_crediario[cid]["pedidos"].append(
                 {
                     "pedido_id": p.id,
-                    "data": (
-                        p.data_criacao.strftime("%d/%m/%Y %H:%M")
-                        if p.data_criacao
-                        else ""
-                    ),
+                    "data": data_str,
                     "valor": total_pedido,
                     "status_pedido": str(p.status_pedido),
                     "itens": [
@@ -713,17 +711,25 @@ def listar_crediario(
                 }
             )
 
-        return list(clientes_crediario.values())
+        # Soma todos os pagamentos já registrados na tabela de pagamentos de crediário
+        todos_pagamentos = db.query(models.PagamentoCrediario).all()
+        total_ja_recebido = sum(pag.valor_pago for pag in todos_pagamentos)
+
+        return {
+            "total_a_receber": total_a_receber,
+            "total_ja_recebido": total_ja_recebido,
+            "devedores": list(clientes_crediario.values())
+        }
     except Exception as e:
         logger.error(f"Erro em /fiados: {e}", exc_info=True)
-        return []
+        return {"total_a_receber": 0.0, "total_ja_recebido": 0.0, "devedores": []}
 
 
 @app.patch("/pedidos/{pedido_id}/entregar", tags=["Pedidos"])
 def marcar_como_entregue(
-        pedido_id: int,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    pedido_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -758,9 +764,9 @@ def marcar_como_entregue(
 
 @app.patch("/pedidos/{pedido_id}/cancelar", tags=["Pedidos"])
 def cancelar_pedido(
-        pedido_id: int,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    pedido_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -784,10 +790,10 @@ def cancelar_pedido(
 
 @app.patch("/pedidos/{pedido_id}/pagamento", tags=["Pedidos"])
 def atualizar_status_pagamento(
-        pedido_id: int,
-        dados: schemas.AtualizarPagamentoSchema,
-        db: Session = Depends(get_db),
-        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+    pedido_id: int,
+    dados: schemas.AtualizarPagamentoSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -801,7 +807,19 @@ def atualizar_status_pagamento(
         else str(dados.status_pagamento)
     ).lower()
 
+    status_anterior = str(pedido.status_pagamento).lower()
     pedido.status_pagamento = status_pag
+
+    # Se estava no crediário e foi quitado diretamente pelo botão Quitar
+    if status_anterior == "fiado" and status_pag == "pago":
+        total_pago = sum((it.quantidade or 0) * (it.preco_unitario or 0.0) for it in pedido.itens)
+        reg_pagamento = models.PagamentoCrediario(
+            cliente_id=pedido.cliente_id,
+            pedido_id=pedido.id,
+            valor_pago=total_pago
+        )
+        db.add(reg_pagamento)
+
     db.commit()
 
     return {

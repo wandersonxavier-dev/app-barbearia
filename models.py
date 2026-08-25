@@ -57,6 +57,7 @@ class Cliente(Base):
     cep = Column(String(20), nullable=True)
 
     pedidos = relationship("Pedido", back_populates="cliente", lazy="selectin")
+    pagamentos_crediario = relationship("PagamentoCrediario", back_populates="cliente", lazy="selectin")
 
 
 class Produto(Base):
@@ -100,3 +101,15 @@ class ItemPedido(Base):
 
     pedido = relationship("Pedido", back_populates="itens")
     produto = relationship("Produto", back_populates="itens_pedido", lazy="joined")
+
+
+class PagamentoCrediario(Base):
+    __tablename__ = "pagamentos_crediario"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    pedido_id = Column(Integer, nullable=True)
+    valor_pago = Column(Float, nullable=False)
+    data_pagamento = Column(DateTime(timezone=True), server_default=func.now())
+
+    cliente = relationship("Cliente", back_populates="pagamentos_crediario")
