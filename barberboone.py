@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.4",
+    version="1.2.5",
 )
 
 
@@ -385,7 +385,7 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente
+        # 1. Localiza ou cria o cliente com base no telefone informado
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -561,13 +561,15 @@ def listar_crediario(
             .filter(
                 models.Pedido.status_pedido != "cancelado"
             )
+            .order_by(models.Pedido.data_criacao.asc())
             .all()
         )
 
+        # Filtro tolerante a qualquer variação de texto para 'fiado'
         pedidos_crediario = [
             p
             for p in todos_pedidos
-            if str(p.status_pagamento).lower() in ["fiado", "statuspagamento.fiado"]
+            if "fiado" in str(p.status_pagamento).lower()
         ]
 
         clientes_crediario = {}
