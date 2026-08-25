@@ -85,7 +85,7 @@ def login(
 
 
 # ==========================================
-# 2. CLIENTES (Público para criar, Protegido para listar)
+# 2. CLIENTES
 # ==========================================
 
 
@@ -98,7 +98,6 @@ def login(
 def cadastrar_ou_obter_cliente(
     dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    # Se o cliente já existir pelo telefone, atualiza o nome e retorna o existente
     cliente_existente = (
         db.query(models.Cliente)
         .filter(models.Cliente.telefone == dados.telefone)
@@ -163,6 +162,52 @@ def cadastrar_produto(
     db.commit()
     db.refresh(novo_produto)
     return novo_produto
+
+
+@app.put(
+    "/produtos/{produto_id}",
+    response_model=schemas.ProdutoResponseSchema,
+    tags=["Produtos"],
+)
+def atualizar_produto(
+    produto_id: int,
+    dados: schemas.ProdutoCriarSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    produto = (
+        db.query(models.Produto)
+        .filter(models.Produto.id == produto_id)
+        .first()
+    )
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+    for campo, valor in dados.model_dump().items():
+        setattr(produto, campo, valor)
+
+    db.commit()
+    db.refresh(produto)
+    return produto
+
+
+@app.delete("/produtos/{produto_id}", tags=["Produtos"])
+def excluir_produto(
+    produto_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    produto = (
+        db.query(models.Produto)
+        .filter(models.Produto.id == produto_id)
+        .first()
+    )
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+    db.delete(produto)
+    db.commit()
+    return {"message": f"Produto '{produto.nome}' removido com sucesso."}
 
 
 # ==========================================
@@ -300,4 +345,27 @@ def cancelar_pedido(
     return {
         "message": "Pedido cancelado com sucesso.",
         "pedido_id": pedido.id,
+    }
+
+
+@app.patch("/pedidos/{pedido_id}/pagamento", tags=["Pedidos"])
+def atualizar_status_pagamento(
+    pedido_id: int,
+    dados: schemas.AtualizarPagamentoSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    pedido = (
+        db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
+    )
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    pedido.status_pagamento = dados.status_pagamento
+    db.commit()
+
+    return {
+        "message": f"Status de pagamento atualizado para {dados.status_pagamento.value}.",
+        "pedido_id": pedido.id,
+        "status_pagamento": pedido.status_pagamento,
     }

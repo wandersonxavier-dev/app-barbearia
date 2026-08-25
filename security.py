@@ -22,7 +22,6 @@ def verificar_senha(senha_plana: str, senha_hash: str) -> bool:
 
 
 def gerar_hash_senha(senha: str) -> str:
-    # Gera o salt e o hash seguro usando bcrypt direto
     salt = bcrypt.gensalt()
     hash_bytes = bcrypt.hashpw(senha.encode("utf-8"), salt)
     return hash_bytes.decode("utf-8")

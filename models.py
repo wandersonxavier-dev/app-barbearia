@@ -70,7 +70,9 @@ class Pedido(Base):
     data_criacao = Column(DateTime, default=datetime.utcnow)
 
     cliente = relationship("Cliente", back_populates="pedidos")
-    itens = relationship("ItemPedido", back_populates="pedido")
+    itens = relationship(
+        "ItemPedido", back_populates="pedido", cascade="all, delete-orphan"
+    )
 
 
 class ItemPedido(Base):

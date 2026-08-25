@@ -89,3 +89,7 @@ class PedidoResponseSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AtualizarPagamentoSchema(BaseModel):
+    status_pagamento: StatusPagamento
