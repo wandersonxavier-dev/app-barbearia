@@ -88,7 +88,7 @@ class ItemPedidoResponseSchema(BaseModel):
 
 class PedidoCriarPublicoSchema(BaseModel):
     cliente_id: int
-    status_pagamento: StatusPagamento
+    status_pagamento: Union[StatusPagamento, str] = "pendente"
     itens: List[ItemPedidoCriarSchema]
 
 
@@ -109,14 +109,14 @@ class PedidoResponseSchema(BaseModel):
     id: int
     cliente_id: int
     cliente: Optional[ClienteResponseSchema] = None
-    status_pagamento: StatusPagamento
-    status_pedido: StatusPedido
-    data_criacao: datetime
-    itens: List[ItemPedidoResponseSchema]
+    status_pagamento: str
+    status_pedido: str
+    data_criacao: Optional[datetime] = None
+    itens: List[ItemPedidoResponseSchema] = []
 
     class Config:
         from_attributes = True
 
 
 class AtualizarPagamentoSchema(BaseModel):
-    status_pagamento: StatusPagamento
+    status_pagamento: Union[StatusPagamento, str]

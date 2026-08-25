@@ -21,31 +21,32 @@ except Exception as e:
     logger.error(f"Erro ao criar tabelas: {e}")
 
 
-# 2. Migração segura e não-bloqueante
+# 2. Migração segura para converter as colunas em VARCHAR(50)
 def executar_migracoes_seguras():
     try:
         with engine.connect() as conn:
-            # Garante que o PostgreSQL aceite todos os formatos de enum no banco legado
             if "postgresql" in str(engine.url):
-                for val in ["fiado", "FIADO", "pendente", "PENDENTE", "pago", "PAGO"]:
-                    try:
-                        conn.execute(text("COMMIT"))
-                        conn.execute(
-                            text(f"ALTER TYPE statuspagamento ADD VALUE IF NOT EXISTS '{val}';")
+                try:
+                    conn.execute(text("COMMIT"))
+                    conn.execute(
+                        text(
+                            "ALTER TABLE pedidos ALTER COLUMN status_pagamento TYPE VARCHAR(50) USING status_pagamento::text;"
                         )
-                        conn.commit()
-                    except Exception:
-                        pass
+                    )
+                    conn.commit()
+                except Exception as ex_p:
+                    logger.warning(f"Aviso conversao status_pagamento: {ex_p}")
 
-                for val_ped in ["solicitado", "SOLICITADO", "entregue", "ENTREGUE", "cancelado", "CANCELADO"]:
-                    try:
-                        conn.execute(text("COMMIT"))
-                        conn.execute(
-                            text(f"ALTER TYPE statuspedido ADD VALUE IF NOT EXISTS '{val_ped}';")
+                try:
+                    conn.execute(text("COMMIT"))
+                    conn.execute(
+                        text(
+                            "ALTER TABLE pedidos ALTER COLUMN status_pedido TYPE VARCHAR(50) USING status_pedido::text;"
                         )
-                        conn.commit()
-                    except Exception:
-                        pass
+                    )
+                    conn.commit()
+                except Exception as ex_s:
+                    logger.warning(f"Aviso conversao status_pedido: {ex_s}")
 
             inspector = inspect(engine)
             colunas_existentes = [
@@ -90,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.1",
+    version="1.2.3",
 )
 
 
@@ -333,10 +334,16 @@ def criar_pedido_web(
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
+    status_pag = (
+        dados.status_pagamento.value
+        if hasattr(dados.status_pagamento, "value")
+        else str(dados.status_pagamento)
+    ).lower()
+
     pedido = models.Pedido(
         cliente_id=dados.cliente_id,
-        status_pagamento=dados.status_pagamento,
-        status_pedido=models.StatusPedido.SOLICITADO,
+        status_pagamento=status_pag,
+        status_pedido="solicitado",
     )
     db.add(pedido)
     db.flush()
@@ -407,11 +414,11 @@ def lancamento_manual_crediario(
             db.add(produto)
             db.flush()
 
-        # 3. Cria o pedido com status FIADO
+        # 3. Cria o pedido com status fiado e entregue
         pedido = models.Pedido(
             cliente_id=cliente.id,
-            status_pagamento=models.StatusPagamento.FIADO,
-            status_pedido=models.StatusPedido.ENTREGUE,
+            status_pagamento="fiado",
+            status_pedido="entregue",
         )
         db.add(pedido)
         db.flush()
@@ -483,11 +490,15 @@ def listar_pedidos(
     db: Session = Depends(get_db),
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
-    return (
-        db.query(models.Pedido)
-        .order_by(models.Pedido.data_criacao.desc())
-        .all()
-    )
+    try:
+        return (
+            db.query(models.Pedido)
+            .order_by(models.Pedido.data_criacao.desc())
+            .all()
+        )
+    except Exception as e:
+        logger.error(f"Erro em listar_pedidos: {e}")
+        return []
 
 
 @app.get("/fiados", tags=["Crediário"])
@@ -499,7 +510,7 @@ def listar_crediario(
         todos_pedidos = (
             db.query(models.Pedido)
             .filter(
-                models.Pedido.status_pedido != models.StatusPedido.CANCELADO
+                models.Pedido.status_pedido != "cancelado"
             )
             .all()
         )
@@ -550,11 +561,7 @@ def listar_crediario(
                         else ""
                     ),
                     "valor": total_pedido,
-                    "status_pedido": (
-                        p.status_pedido.value
-                        if hasattr(p.status_pedido, "value")
-                        else str(p.status_pedido)
-                    ),
+                    "status_pedido": str(p.status_pedido),
                     "itens": [
                         {
                             "produto": (
@@ -588,7 +595,7 @@ def marcar_como_entregue(
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
-    if pedido.status_pedido == models.StatusPedido.ENTREGUE:
+    if str(pedido.status_pedido).lower() == "entregue":
         raise HTTPException(
             status_code=400, detail="Este pedido já foi entregue anteriormente."
         )
@@ -603,7 +610,7 @@ def marcar_como_entregue(
     for item in pedido.itens:
         item.produto.quantidade_estoque -= item.quantidade
 
-    pedido.status_pedido = models.StatusPedido.ENTREGUE
+    pedido.status_pedido = "entregue"
     db.commit()
 
     return {
@@ -624,14 +631,14 @@ def cancelar_pedido(
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
-    if pedido.status_pedido == models.StatusPedido.CANCELADO:
+    if str(pedido.status_pedido).lower() == "cancelado":
         raise HTTPException(status_code=400, detail="Pedido já cancelado.")
 
-    if pedido.status_pedido == models.StatusPedido.ENTREGUE:
+    if str(pedido.status_pedido).lower() == "entregue":
         for item in pedido.itens:
             item.produto.quantidade_estoque += item.quantidade
 
-    pedido.status_pedido = models.StatusPedido.CANCELADO
+    pedido.status_pedido = "cancelado"
     db.commit()
 
     return {"message": "Pedido cancelado.", "pedido_id": pedido.id}
@@ -650,11 +657,17 @@ def atualizar_status_pagamento(
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
-    pedido.status_pagamento = dados.status_pagamento
+    status_pag = (
+        dados.status_pagamento.value
+        if hasattr(dados.status_pagamento, "value")
+        else str(dados.status_pagamento)
+    ).lower()
+
+    pedido.status_pagamento = status_pag
     db.commit()
 
     return {
-        "message": f"Status atualizado para {dados.status_pagamento.value}.",
+        "message": f"Status atualizado para {status_pag}.",
         "pedido_id": pedido.id,
         "status_pagamento": pedido.status_pagamento,
     }
