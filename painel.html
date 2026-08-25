@@ -165,6 +165,11 @@
       color: #bbb;
       line-height: 1.6;
     }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
@@ -265,8 +270,39 @@
 
     <!-- 3. CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
+      <!-- FORMULÁRIO DE LANÇAMENTO MANUAL -->
+      <div class="card-item" style="border-left-color: #9b59b6;">
+        <h3 style="margin-top: 0; color: #f39c12;">➕ Novo Lançamento no Crediário</h3>
+
+        <div class="grid-2">
+          <div>
+            <label style="font-size: 12px;">WhatsApp / Telefone:</label>
+            <input type="tel" id="cred-telefone" placeholder="Ex: 27999998888" onblur="verificarClientePorTelefone(this.value)">
+          </div>
+          <div>
+            <label style="font-size: 12px;">Nome do Cliente:</label>
+            <input type="text" id="cred-nome" placeholder="Preenchido automático ou digite">
+          </div>
+        </div>
+
+        <div id="cred-aviso-cliente" style="font-size: 12px; color: #2ecc71; margin-bottom: 8px; display: none;"></div>
+
+        <div class="grid-2">
+          <div>
+            <label style="font-size: 12px;">Item / Descrição do Serviço:</label>
+            <input type="text" id="cred-item" placeholder="Ex: Corte Cabelo + Pomada">
+          </div>
+          <div>
+            <label style="font-size: 12px;">Valor Total (R$):</label>
+            <input type="number" step="0.01" id="cred-valor" placeholder="Ex: 45.00">
+          </div>
+        </div>
+
+        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar na Conta do Cliente</button>
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px;">💳 Gestão de Crediário (Contas a Prazo)</h2>
+        <h2 style="margin: 0; font-size: 18px;">💳 Contas em Aberto</h2>
         <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarCrediario()">🔄 Atualizar</button>
       </div>
       <div id="lista-crediario">Carregando registros do crediário...</div>
@@ -372,7 +408,10 @@
 
   function fazerLogout() {
     localStorage.removeItem("token_barbeiro");
-    location.reload();
+    tokenJWT = "";
+    document.getElementById("secao-painel").style.display = "none";
+    document.getElementById("secao-auth").style.display = "block";
+    alternarTelaAuth("login");
   }
 
   function iniciarPainel() {
@@ -514,6 +553,76 @@
     }
   }
 
+  // --- CONTROLE DE CREDIÁRIO ---
+  async function verificarClientePorTelefone(tel) {
+    const aviso = document.getElementById("cred-aviso-cliente");
+    const campoNome = document.getElementById("cred-nome");
+    const limpo = tel.trim();
+    if (limpo.length < 8) return;
+
+    try {
+      const resp = await fetch(`${API_URL}/clientes/telefone/${limpo}`, {
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+      if (resp.ok) {
+        const cliente = await resp.json();
+        campoNome.value = cliente.nome;
+        aviso.innerText = `✔ Cliente cadastrado encontrado: ${cliente.nome}`;
+        aviso.style.display = "block";
+      } else {
+        aviso.innerText = `ℹ Novo cliente (será cadastrado ao lançar)`;
+        aviso.style.display = "block";
+      }
+    } catch (e) {
+      aviso.style.display = "none";
+    }
+  }
+
+  async function lancarCrediarioManual() {
+    const telefone = document.getElementById("cred-telefone").value.trim();
+    const nome = document.getElementById("cred-nome").value.trim();
+    const descricao_item = document.getElementById("cred-item").value.trim();
+    const valor = parseFloat(document.getElementById("cred-valor").value);
+
+    if (!telefone || !nome || !descricao_item || isNaN(valor) || valor <= 0) {
+      alert("Por favor, preencha todos os campos do lançamento corretamente.");
+      return;
+    }
+
+    const btn = document.getElementById("btn-lancar-cred");
+    btn.innerText = "Lançando...";
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch(`${API_URL}/pedidos/manual`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify({ telefone, nome, descricao_item, valor })
+      });
+
+      if (resp.ok) {
+        alert("Débito lançado com sucesso na conta do cliente!");
+        document.getElementById("cred-telefone").value = "";
+        document.getElementById("cred-nome").value = "";
+        document.getElementById("cred-item").value = "";
+        document.getElementById("cred-valor").value = "";
+        document.getElementById("cred-aviso-cliente").style.display = "none";
+        carregarCrediario();
+      } else {
+        const err = await resp.json();
+        alert(`Erro: ${err.detail || 'Falha ao lançar débito'}`);
+      }
+    } catch (e) {
+      alert("Erro ao conectar com o servidor.");
+    } finally {
+      btn.innerText = "Lançar na Conta do Cliente";
+      btn.disabled = false;
+    }
+  }
+
   async function carregarCrediario() {
     const container = document.getElementById("lista-crediario");
     try {
@@ -524,12 +633,6 @@
       if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
         fazerLogout();
-        return;
-      }
-
-      if (!response.ok) {
-        const erroJson = await response.json().catch(() => ({}));
-        container.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar crediário.'}</p>`;
         return;
       }
 
@@ -550,16 +653,27 @@
     container.innerHTML = devedores.map(d => {
       const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
-      const msgCobranca = encodeURIComponent(`Olá ${c.nome}, tudo bem? Passando para lembrar do seu saldo em aberto de R$ ${d.total_divida.toFixed(2)} no crediário da Barber Boone.`);
-      const linkCobranca = `https://wa.me/55${zapLimpo}?text=${msgCobranca}`;
+
+      // Monta o extrato formatado para o WhatsApp
+      let textoExtrato = `💈 *BARBER BOONE - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus lançamentos em aberto:\n`;
+      (d.pedidos || []).forEach(p => {
+        const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
+        textoExtrato += `\n• *Pedido #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
+      });
+      textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *27997834019*\nQualquer dúvida estamos à disposição!`;
+
+      const linkCobranca = `https://wa.me/55${zapLimpo}?text=${encodeURIComponent(textoExtrato)}`;
 
       const pedidosHtml = (d.pedidos || []).map(p => `
-        <div style="border-bottom: 1px solid #333; padding: 6px 0; display:flex; justify-content:space-between; align-items:center;">
+        <div style="border-bottom: 1px solid #333; padding: 8px 0; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <b>Pedido #${p.pedido_id}</b> (${p.data}) - R$ ${p.valor.toFixed(2)}
-            <div style="font-size:11px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
+            <b>Lançamento #${p.pedido_id}</b> (${p.data}) — <span style="color:#f39c12; font-weight:bold;">R$ ${p.valor.toFixed(2)}</span>
+            <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
           </div>
-          <button class="btn-action btn-green" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar Conta</button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-action btn-edit" title="Editar Valor" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
+            <button class="btn-action btn-green" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
+          </div>
         </div>
       `).join("");
 
@@ -582,20 +696,51 @@
           </div>
 
           <div class="itens-lista">
-            <b>Lançamentos a Prazo:</b>
+            <b>Histórico de Compras a Prazo:</b>
             ${pedidosHtml}
           </div>
 
           <div style="text-align:right; margin-top:8px;">
-            <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Enviar Lembrete / Extrato</a>
+            <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Enviar Extrato via WhatsApp</a>
           </div>
         </div>
       `;
     }).join("");
   }
 
+  async function editarValorLancamento(pedidoId, valorAtual) {
+    const novoValorStr = prompt(`Informe o novo valor para o Lançamento #${pedidoId}:`, valorAtual.toFixed(2));
+    if (novoValorStr === null) return;
+
+    const novoValor = parseFloat(novoValorStr.replace(",", "."));
+    if (isNaN(novoValor) || novoValor <= 0) {
+      alert("Valor inválido.");
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API_URL}/pedidos/${pedidoId}/valor`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify({ novo_valor: novoValor })
+      });
+
+      if (resp.ok) {
+        alert("Valor atualizado com sucesso!");
+        carregarCrediario();
+      } else {
+        alert("Falha ao atualizar valor.");
+      }
+    } catch (e) {
+      alert("Erro de conexão.");
+    }
+  }
+
   async function quitarPedidoCrediario(pedidoId) {
-    if (!confirm(`Confirmar o recebimento e quitar o Pedido #${pedidoId}?`)) return;
+    if (!confirm(`Confirmar o recebimento e quitar o Lançamento #${pedidoId}?`)) return;
 
     try {
       const response = await fetch(`${API_URL}/pedidos/${pedidoId}/pagamento`, {

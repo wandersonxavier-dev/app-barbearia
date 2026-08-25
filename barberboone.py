@@ -21,16 +21,13 @@ except Exception as e:
     logger.error(f"Erro ao criar tabelas: {e}")
 
 
-# 2. Migração segura e não-bloqueante
+# 2. Migração segura
 def executar_migracoes_seguras():
     try:
         with engine.connect() as conn:
-            # Atualização do Enum no PostgreSQL
             if "postgresql" in str(engine.url):
                 try:
-                    conn.execute(
-                        text("COMMIT")
-                    )  # Encerra qualquer transação pendente
+                    conn.execute(text("COMMIT"))
                     conn.execute(
                         text(
                             "ALTER TYPE statuspagamento ADD VALUE IF NOT EXISTS 'fiado';"
@@ -40,7 +37,6 @@ def executar_migracoes_seguras():
                 except Exception as ex_enum:
                     logger.warning(f"Aviso Enum: {ex_enum}")
 
-            # Identifica colunas já existentes na tabela clientes
             inspector = inspect(engine)
             colunas_existentes = [
                 col["name"] for col in inspector.get_columns("clientes")
@@ -72,7 +68,6 @@ def executar_migracoes_seguras():
                             )
                         )
                         conn.commit()
-                        logger.info(f"Coluna {nome} adicionada com sucesso.")
                     except Exception as ex_col:
                         logger.warning(f"Erro ao adicionar {nome}: {ex_col}")
     except Exception as err:
@@ -84,16 +79,15 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="App Barber API",
     description="API para gestão de clientes, estoque, pedidos e crediário",
-    version="1.1.0",
+    version="1.2.0",
 )
 
-# Endpoint de verificação de saúde da API
+
 @app.get("/health", tags=["Geral"])
 def health_check():
     return {"status": "online"}
 
 
-# Configuração de CORS aberta
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -193,6 +187,26 @@ def cadastrar_ou_obter_cliente(
 
 
 @app.get(
+    "/clientes/telefone/{telefone}",
+    response_model=schemas.ClienteResponseSchema,
+    tags=["Clientes"],
+)
+def buscar_cliente_por_telefone(
+    telefone: str,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    cliente = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.telefone == telefone)
+        .first()
+    )
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    return cliente
+
+
+@app.get(
     "/clientes",
     response_model=List[schemas.ClienteResponseSchema],
     tags=["Clientes"],
@@ -287,7 +301,7 @@ def excluir_produto(
 
 
 # ==========================================
-# 4. PEDIDOS E CREDIÁRIO
+# 4. PEDIDOS E LANÇAMENTO MANUAL DE CREDIÁRIO
 # ==========================================
 
 
@@ -341,6 +355,92 @@ def criar_pedido_web(
     return pedido
 
 
+@app.post("/pedidos/manual", tags=["Crediário"])
+def lancamento_manual_crediario(
+    dados: schemas.LancamentoManualSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    # 1. Localiza ou cria o cliente com base no telefone informado
+    cliente = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.telefone == dados.telefone)
+        .first()
+    )
+    if not cliente:
+        cliente = models.Cliente(nome=dados.nome, telefone=dados.telefone)
+        db.add(cliente)
+        db.flush()
+    elif dados.nome and cliente.nome != dados.nome:
+        cliente.nome = dados.nome
+
+    # 2. Localiza ou cria um item avulso para registrar o lançamento
+    produto_avulso = (
+        db.query(models.Produto)
+        .filter(models.Produto.nome == dados.descricao_item)
+        .first()
+    )
+    if not produto_avulso:
+        produto_avulso = models.Produto(
+            nome=dados.descricao_item,
+            descricao="Lançamento manual de serviço ou produto no crediário",
+            preco=dados.valor,
+            quantidade_estoque=999,
+        )
+        db.add(produto_avulso)
+        db.flush()
+
+    # 3. Cria o pedido com status FIADO e ENTREGUE
+    pedido = models.Pedido(
+        cliente_id=cliente.id,
+        status_pagamento=models.StatusPagamento.FIADO,
+        status_pedido=models.StatusPedido.ENTREGUE,
+    )
+    db.add(pedido)
+    db.flush()
+
+    item_pedido = models.ItemPedido(
+        pedido_id=pedido.id,
+        produto_id=produto_avulso.id,
+        quantidade=dados.quantidade,
+        preco_unitario=dados.valor,
+    )
+    db.add(item_pedido)
+    db.commit()
+
+    return {
+        "message": "Débito lançado no Crediário com sucesso!",
+        "pedido_id": pedido.id,
+        "cliente": cliente.nome,
+    }
+
+
+@app.patch("/pedidos/{pedido_id}/valor", tags=["Crediário"])
+def editar_valor_pedido(
+    pedido_id: int,
+    dados: schemas.EditarValorPedidoSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    pedido = (
+        db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
+    )
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    if not pedido.itens:
+        raise HTTPException(
+            status_code=400, detail="Pedido sem itens para alteração"
+        )
+
+    # Atualiza o preço unitário do item principal
+    pedido.itens[0].preco_unitario = dados.novo_valor
+    pedido.itens[0].quantidade = 1
+    db.commit()
+
+    return {"message": "Valor atualizado com sucesso!", "novo_valor": dados.novo_valor}
+
+
 @app.get(
     "/pedidos",
     response_model=List[schemas.PedidoResponseSchema],
@@ -371,7 +471,6 @@ def listar_crediario(
             .all()
         )
 
-        # Filtra os pedidos com status fiado de maneira segura
         pedidos_crediario = [
             p
             for p in todos_pedidos

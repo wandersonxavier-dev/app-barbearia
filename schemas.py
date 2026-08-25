@@ -25,7 +25,7 @@ class TokenSchema(BaseModel):
     token_type: str
 
 
-# --- Schemas de Clientes com todos os campos da ficha ---
+# --- Schemas de Clientes ---
 class ClienteCriarSchema(BaseModel):
     nome: str
     telefone: str
@@ -68,7 +68,7 @@ class ProdutoResponseSchema(ProdutoCriarSchema):
         from_attributes = True
 
 
-# --- Schemas de Pedidos ---
+# --- Schemas de Pedidos & Crediário Manual ---
 class ItemPedidoCriarSchema(BaseModel):
     produto_id: int
     quantidade: int
@@ -89,6 +89,18 @@ class PedidoCriarPublicoSchema(BaseModel):
     cliente_id: int
     status_pagamento: StatusPagamento
     itens: List[ItemPedidoCriarSchema]
+
+
+class LancamentoManualSchema(BaseModel):
+    telefone: str
+    nome: str
+    descricao_item: str
+    valor: float
+    quantidade: int = 1
+
+
+class EditarValorPedidoSchema(BaseModel):
+    novo_valor: float
 
 
 class PedidoResponseSchema(BaseModel):
