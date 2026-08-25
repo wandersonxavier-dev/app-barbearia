@@ -263,7 +263,7 @@
       <div id="lista-produtos">Carregando produtos...</div>
     </div>
 
-    <!-- 3. CREDIÁRIO / CONTA CLIENTE -->
+    <!-- 3. CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 18px;">💳 Gestão de Crediário (Contas a Prazo)</h2>
@@ -396,6 +396,7 @@
   }
 
   async function carregarPedidos() {
+    const container = document.getElementById("lista-pedidos");
     try {
       const response = await fetch(`${API_URL}/pedidos`, {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
@@ -407,16 +408,22 @@
         return;
       }
 
+      if (!response.ok) {
+        const erroJson = await response.json().catch(() => ({}));
+        container.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar pedidos.'}</p>`;
+        return;
+      }
+
       const pedidos = await response.json();
       renderizarPedidos(pedidos);
     } catch (e) {
-      document.getElementById("lista-pedidos").innerHTML = "<p style='color: red;'>Erro ao buscar pedidos.</p>";
+      container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
   }
 
   function renderizarPedidos(pedidos) {
     const container = document.getElementById("lista-pedidos");
-    if (pedidos.length === 0) {
+    if (!Array.isArray(pedidos) || pedidos.length === 0) {
       container.innerHTML = "<p>Nenhum pedido recebido até o momento.</p>";
       return;
     }
@@ -427,7 +434,7 @@
       const clienteNome = c.nome || `Cliente #${p.cliente_id}`;
       const clienteTel = c.telefone || "";
 
-      const itensHtml = p.itens.map(item => {
+      const itensHtml = (p.itens || []).map(item => {
         const subtotal = item.quantidade * item.preco_unitario;
         total += subtotal;
         const nomeProd = item.produto ? item.produto.nome : `Produto #${item.produto_id}`;
@@ -507,33 +514,46 @@
     }
   }
 
-  // --- CONTROLE DE CREDIÁRIO ---
   async function carregarCrediario() {
+    const container = document.getElementById("lista-crediario");
     try {
       const response = await fetch(`${API_URL}/fiados`, {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
       });
+
+      if (response.status === 401) {
+        alert("Sessão expirada. Faça login novamente.");
+        fazerLogout();
+        return;
+      }
+
+      if (!response.ok) {
+        const erroJson = await response.json().catch(() => ({}));
+        container.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar crediário.'}</p>`;
+        return;
+      }
+
       const devedores = await response.json();
       renderizarCrediario(devedores);
     } catch (e) {
-      document.getElementById("lista-crediario").innerHTML = "<p style='color: red;'>Erro ao buscar crediário.</p>";
+      container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
   }
 
   function renderizarCrediario(devedores) {
     const container = document.getElementById("lista-crediario");
-    if (devedores.length === 0) {
+    if (!Array.isArray(devedores) || devedores.length === 0) {
       container.innerHTML = "<p style='color:#2ecc71; font-weight:bold;'>🎉 Nenhuma conta em aberto no crediário no momento!</p>";
       return;
     }
 
     container.innerHTML = devedores.map(d => {
-      const c = d.cliente;
+      const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
       const msgCobranca = encodeURIComponent(`Olá ${c.nome}, tudo bem? Passando para lembrar do seu saldo em aberto de R$ ${d.total_divida.toFixed(2)} no crediário da Barber Boone.`);
       const linkCobranca = `https://wa.me/55${zapLimpo}?text=${msgCobranca}`;
 
-      const pedidosHtml = d.pedidos.map(p => `
+      const pedidosHtml = (d.pedidos || []).map(p => `
         <div style="border-bottom: 1px solid #333; padding: 6px 0; display:flex; justify-content:space-between; align-items:center;">
           <div>
             <b>Pedido #${p.pedido_id}</b> (${p.data}) - R$ ${p.valor.toFixed(2)}
