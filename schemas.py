@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 from models import StatusPagamento, StatusPedido
 
 
+# --- Schemas de Autenticação / Usuário ---
 class UsuarioCriarSchema(BaseModel):
     nome: str
     email: EmailStr
@@ -68,7 +69,7 @@ class ProdutoResponseSchema(ProdutoCriarSchema):
         from_attributes = True
 
 
-# --- Schemas de Pedidos & Crediário Manual ---
+# --- Schemas de Pedidos & Itens ---
 class ItemPedidoCriarSchema(BaseModel):
     produto_id: int
     quantidade: int
@@ -91,12 +92,13 @@ class PedidoCriarPublicoSchema(BaseModel):
     itens: List[ItemPedidoCriarSchema]
 
 
+# --- Schemas para o Módulo de Crediário ---
 class LancamentoManualSchema(BaseModel):
     telefone: str
     nome: str
     descricao_item: str
     valor: float
-    quantidade: int = 1
+    quantidade: Optional[int] = 1
 
 
 class EditarValorPedidoSchema(BaseModel):
@@ -118,3 +120,4 @@ class PedidoResponseSchema(BaseModel):
 
 class AtualizarPagamentoSchema(BaseModel):
     status_pagamento: StatusPagamento
+    

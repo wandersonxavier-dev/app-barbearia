@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="/manifest.json">
-  <title>Painel do Barbeiro</title>
+  <title>Infinity 027 - Painel Administrativo</title>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #121212;
+      background-color: #0d0d0d;
       color: #e0e0e0;
       margin: 0;
       padding: 16px;
@@ -22,21 +22,39 @@
     }
     .header-logo {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 22px;
     }
     .header-logo img {
-      width: 90px;
-      height: 90px;
+      width: 95px;
+      height: 95px;
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid #e74c3c;
+      box-shadow: 0 0 16px rgba(231, 76, 60, 0.35);
+    }
+    .brand-title {
+      margin: 8px 0 2px 0;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: #e74c3c;
+      text-transform: uppercase;
+    }
+    .brand-slogan {
+      margin: 0;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: #888;
+      text-transform: uppercase;
     }
     .auth-box, .card-item {
-      background: #1e1e1e;
+      background: #161616;
       padding: 18px;
       border-radius: 8px;
       margin-bottom: 16px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+      border: 1px solid #242424;
     }
     .auth-box {
       margin-top: 20px;
@@ -46,28 +64,29 @@
       width: 100%;
       padding: 12px;
       margin: 6px 0 14px 0;
-      background: #2a2a2a;
-      border: 1px solid #444;
+      background: #202020;
+      border: 1px solid #333;
       color: white;
       border-radius: 6px;
       font-size: 14px;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     input:focus, select:focus, textarea:focus {
-      border-color: #f39c12;
+      border-color: #e74c3c;
+      box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
     }
     label {
       font-size: 12px;
       font-weight: 600;
-      color: #ccc;
+      color: #bbb;
       display: block;
       margin-bottom: 2px;
     }
     .btn-main {
-      background-color: #f39c12;
-      color: #121212;
+      background-color: #e74c3c;
+      color: #ffffff;
       border: none;
       padding: 13px 20px;
       font-weight: bold;
@@ -75,13 +94,15 @@
       cursor: pointer;
       width: 100%;
       font-size: 15px;
-      transition: opacity 0.2s ease;
+      letter-spacing: 0.5px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
     }
     .btn-main:active {
-      opacity: 0.85;
+      background-color: #c0392b;
+      transform: scale(0.99);
     }
     .link-toggle {
-      color: #f39c12;
+      color: #e74c3c;
       cursor: pointer;
       font-size: 13px;
       margin-top: 14px;
@@ -96,32 +117,35 @@
     .nav-btn {
       flex: 1;
       padding: 11px 6px;
-      background: #2a2a2a;
-      color: #aaa;
-      border: none;
+      background: #1c1c1c;
+      color: #888;
+      border: 1px solid #2a2a2a;
       border-radius: 6px;
       font-weight: bold;
       cursor: pointer;
       font-size: 13px;
       text-align: center;
+      transition: all 0.2s;
     }
     .nav-btn.active {
-      background: #f39c12;
-      color: #121212;
+      background: #e74c3c;
+      color: #ffffff;
+      border-color: #e74c3c;
+      box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);
     }
     .card-item {
-      border-left: 4px solid #f39c12;
+      border-left: 4px solid #e74c3c;
     }
     .card-item.entregue {
       border-left-color: #2ecc71;
-      opacity: 0.85;
+      opacity: 0.9;
     }
     .card-item.cancelado {
       border-left-color: #7f8c8d;
       opacity: 0.5;
     }
     .card-item.crediario-card {
-      border-left-color: #9b59b6;
+      border-left-color: #c0392b;
     }
     .badge {
       display: inline-block;
@@ -132,18 +156,19 @@
       text-transform: uppercase;
       cursor: pointer;
     }
-    .badge-solicitado { background: #e67e22; color: #fff; }
+    .badge-solicitado { background: #d35400; color: #fff; }
     .badge-entregue { background: #27ae60; color: #fff; }
     .badge-cancelado { background: #7f8c8d; color: #fff; }
     .badge-pendente { background: #c0392b; color: #fff; }
     .badge-pago { background: #2980b9; color: #fff; }
-    .badge-fiado { background: #8e44ad; color: #fff; }
+    .badge-fiado { background: #962d22; color: #fff; }
     .itens-lista {
       margin: 12px 0;
-      background: #252525;
+      background: #1e1e1e;
       padding: 10px;
       border-radius: 4px;
       font-size: 14px;
+      border: 1px solid #292929;
     }
     .btn-action {
       border: none;
@@ -154,9 +179,9 @@
       font-size: 13px;
     }
     .btn-green { background-color: #27ae60; color: white; }
-    .btn-danger { background-color: #e74c3c; color: white; }
-    .btn-edit { background-color: #3498db; color: white; }
-    .btn-share { background-color: #e67e22; color: white; }
+    .btn-danger { background-color: #c0392b; color: white; }
+    .btn-edit { background-color: #34495e; color: white; }
+    .btn-share { background-color: #d35400; color: white; }
     .btn-whatsapp {
       background-color: #25d366;
       color: #121212;
@@ -172,20 +197,22 @@
       height: 50px;
       border-radius: 6px;
       object-fit: cover;
-      background-color: #333;
+      background-color: #222;
       margin-right: 12px;
+      border: 1px solid #333;
     }
     .ficha-box {
-      background: #191919;
+      background: #131313;
       padding: 10px;
       border-radius: 6px;
       margin: 8px 0;
       font-size: 12px;
-      color: #bbb;
+      color: #aaa;
       line-height: 1.6;
+      border: 1px solid #222;
     }
 
-    /* SISTEMA DE GRIDS RESPONSIVOS */
+    /* GRIDS RESPONSIVOS */
     .form-row {
       display: grid;
       grid-template-columns: 1fr;
@@ -203,17 +230,18 @@
 
 <div class="container">
 
-  <!-- CABEÇALHO -->
+  <!-- CABEÇALHO COM A IDENTIDADE INFINITY 027 -->
   <div class="header-logo">
     <img id="app-logo" src="https://i.imgur.com/snD8nkl.png" alt="Logo Infinity 027">
-    <h2 style="margin: 8px 0 0 0; font-size: 18px; color: #f39c12;">Barber Boone</h2>
+    <h2 class="brand-title">INFINITY 027</h2>
+    <p class="brand-slogan">BEAUTY • STYLE • CONFIDENCE</p>
   </div>
 
   <!-- AUTENTICAÇÃO -->
   <div id="secao-auth">
     <div id="box-login" class="auth-box">
-      <h2>🔐 Acesso do Barbeiro</h2>
-      <input type="email" id="login-email" placeholder="Seu e-mail" value="barbeiro@gmail.com">
+      <h2 style="color: #e74c3c;">🔐 Painel de Acesso</h2>
+      <input type="email" id="login-email" placeholder="Seu e-mail de acesso" value="barbeiro@gmail.com">
       <input type="password" id="login-senha" placeholder="Sua senha" value="123">
       <button class="btn-main" id="btn-login" onclick="fazerLogin()">Entrar no Painel</button>
       <br>
@@ -221,17 +249,17 @@
     </div>
 
     <div id="box-cadastro" class="auth-box" style="display: none;">
-      <h2>✂ Criar Conta de Barbeiro</h2>
+      <h2 style="color: #e74c3c;">✂ Criar Nova Conta</h2>
       <input type="text" id="cad-nome" placeholder="Seu Nome Completo">
       <input type="email" id="cad-email" placeholder="Seu E-mail de Acesso">
       <input type="password" id="cad-senha" placeholder="Crie uma Senha">
-      <button class="btn-main" id="btn-cadastrar" onclick="cadastrarBarbeiro()">Criar Minha Conta</button>
+      <button class="btn-main" id="btn-cadastrar" onclick="cadastrarBarbeiro()">Criar Conta</button>
       <br>
       <span class="link-toggle" onclick="alternarTelaAuth('login')">Já possui cadastro? Fazer login</span>
     </div>
   </div>
 
-  <!-- PAINEL -->
+  <!-- PAINEL PRINCIPAL -->
   <div id="secao-painel" style="display: none;">
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
@@ -242,9 +270,9 @@
     <!-- 1. ABA PEDIDOS -->
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px;">Pedidos Recebidos</h2>
+        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">Pedidos Recebidos</h2>
         <div style="display: flex; gap: 8px;">
-          <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
+          <button class="btn-action" style="background:#262626; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
           <button class="btn-action btn-danger" onclick="fazerLogout()">Sair</button>
         </div>
       </div>
@@ -253,15 +281,15 @@
 
     <!-- 2. ABA PRODUTOS -->
     <div id="aba-produtos" style="display: none;">
-      <div class="card-item" style="border-left-color: #3498db;">
-        <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
+      <div class="card-item" style="border-left-color: #e74c3c;">
+        <h3 id="form-produto-titulo" style="margin-top: 0; color: #e74c3c;">➕ Cadastrar Novo Produto</h3>
         <input type="hidden" id="produto-id">
 
         <label>Nome do Produto:</label>
-        <input type="text" id="produto-nome" placeholder="Ex: Pomada Efeito Seco">
+        <input type="text" id="produto-nome" placeholder="Ex: Pomada Matte Infinity 027">
 
         <label>Descrição do Produto:</label>
-        <textarea id="produto-descricao" rows="2" placeholder="Ex: Fixação forte e efeito fosco."></textarea>
+        <textarea id="produto-descricao" rows="2" placeholder="Ex: Fixação extra forte e acabamento fosco natural."></textarea>
 
         <div class="form-row grid-2">
           <div>
@@ -279,12 +307,12 @@
         <input type="file" id="input-galeria" accept="image/*" style="display: none;" onchange="processarFotoProduto(event)">
 
         <div style="display: flex; gap: 10px; margin: 8px 0 14px 0;">
-          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 11px;" onclick="document.getElementById('input-camera').click()">📷 Câmera</button>
-          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 11px;" onclick="document.getElementById('input-galeria').click()">📁 Galeria</button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #242424; color: white; padding: 11px; border: 1px solid #333;" onclick="document.getElementById('input-camera').click()">📷 Câmera</button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #242424; color: white; padding: 11px; border: 1px solid #333;" onclick="document.getElementById('input-galeria').click()">📁 Galeria</button>
         </div>
 
         <div id="box-preview-foto" style="display: none; text-align: center; margin-bottom: 12px;">
-          <img id="preview-foto" src="" alt="Prévia da foto" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid #f39c12; display: inline-block;">
+          <img id="preview-foto" src="" alt="Prévia da foto" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid #e74c3c; display: inline-block;">
           <br>
           <button type="button" class="btn-action btn-danger" style="margin-top: 6px; padding: 4px 8px; font-size: 11px;" onclick="removerFoto()">❌ Remover Foto</button>
         </div>
@@ -295,15 +323,14 @@
         </div>
       </div>
 
-      <h3 style="font-size: 18px;">Produtos no Catálogo</h3>
+      <h3 style="font-size: 18px; color: #e74c3c;">Catálogo de Produtos</h3>
       <div id="lista-produtos">Carregando produtos...</div>
     </div>
 
     <!-- 3. ABA CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
-      <!-- FORMULÁRIO COM SELEÇÃO DINÂMICA DE PRODUTOS E ALINHAMENTO CORRIGIDO -->
-      <div class="card-item" style="border-left-color: #9b59b6;">
-        <h3 style="margin-top: 0; color: #f39c12;">➕ Novo Lançamento no Crediário</h3>
+      <div class="card-item" style="border-left-color: #e74c3c;">
+        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento no Crediário</h3>
 
         <div class="form-row grid-2">
           <div>
@@ -328,7 +355,7 @@
 
         <div id="box-item-personalizado" style="display: none;">
           <label>Nome do Serviço ou Item Avulso:</label>
-          <input type="text" id="cred-item-custom" placeholder="Ex: Corte de Cabelo + Barboterapia">
+          <input type="text" id="cred-item-custom" placeholder="Ex: Corte Degrade + Barboterapia">
         </div>
 
         <div class="form-row grid-2">
@@ -346,8 +373,8 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px;">💳 Contas em Aberto</h2>
-        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarCrediario()">🔄 Atualizar</button>
+        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">💳 Contas em Aberto</h2>
+        <button class="btn-action" style="background:#262626; color:#fff;" onclick="carregarCrediario()">🔄 Atualizar</button>
       </div>
       <div id="lista-crediario">Carregando registros do crediário...</div>
     </div>
@@ -406,7 +433,7 @@
     } catch (e) {
       alert("Erro ao conectar ao servidor.");
     } finally {
-      btn.innerText = "Criar Minha Conta";
+      btn.innerText = "Criar Conta";
       btn.disabled = false;
     }
   }
@@ -531,7 +558,7 @@
 
       const isEntregue = p.status_pedido === "entregue";
       const isCancelado = p.status_pedido === "cancelado";
-      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
+      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na Infinity 027 no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
 
       let statusClasse = "";
@@ -544,7 +571,7 @@
         <div class="card-item ${statusClasse}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <h3 style="margin: 0; font-size: 16px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
+              <h3 style="margin: 0; font-size: 16px; color:#fff;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
               ${clienteTel && !isCancelado ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp" style="margin-top:6px;">💬 WhatsApp</a>` : ''}
             </div>
             <div style="display: flex; gap: 6px;">
@@ -560,7 +587,7 @@
 
           <div class="itens-lista">
             ${itensHtml}
-            <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">Total: R$ ${total.toFixed(2)}</div>
+            <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #e74c3c;">Total: R$ ${total.toFixed(2)}</div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <small style="color: #777;">${new Date(p.data_criacao).toLocaleString('pt-BR')}</small>
@@ -671,17 +698,32 @@
     const nome = document.getElementById("cred-nome").value.trim();
     const select = document.getElementById("cred-select-produto");
     const qtd = parseInt(document.getElementById("cred-qtd").value) || 1;
-    const valor = parseFloat(document.getElementById("cred-valor").value);
+    let valor = parseFloat(document.getElementById("cred-valor").value);
 
     let descricao_item = "";
     if (select.value === "outro") {
       descricao_item = document.getElementById("cred-item-custom").value.trim();
     } else if (select.value) {
-      descricao_item = select.options[select.selectedIndex].getAttribute("data-nome");
+      const opt = select.options[select.selectedIndex];
+      descricao_item = opt.getAttribute("data-nome") || opt.text.split("—")[0].trim();
+      if (isNaN(valor) || valor <= 0) {
+        const precoUnit = parseFloat(opt.getAttribute("data-preco")) || 0;
+        valor = precoUnit * qtd;
+      }
     }
 
-    if (!telefone || !nome || !descricao_item || isNaN(valor) || valor <= 0) {
-      alert("Por favor, preencha todos os campos do débito corretamente.");
+    if (!telefone || !nome) {
+      alert("Por favor, preencha o Telefone e Nome do cliente.");
+      return;
+    }
+
+    if (!descricao_item) {
+      alert("Por favor, selecione um produto ou digite o serviço personalizado.");
+      return;
+    }
+
+    if (isNaN(valor) || valor <= 0) {
+      alert("Por favor, informe um valor válido.");
       return;
     }
 
@@ -696,13 +738,19 @@
           "Content-Type": "application/json",
           "Authorization": `Bearer ${tokenJWT}`
         },
-        body: JSON.stringify({ telefone, nome, descricao_item, valor, quantidade: qtd })
+        body: JSON.stringify({
+          telefone: telefone,
+          nome: nome,
+          descricao_item: descricao_item,
+          valor: valor,
+          quantidade: qtd
+        })
       });
 
       if (resp.ok) {
         const zapLimpo = telefone.replace(/\D/g, '');
         const msgZap = encodeURIComponent(
-          `💈 *BARBER BOONE - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!`
+          `💈 *INFINITY 027 - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`
         );
 
         if (confirm("✔ Débito lançado com sucesso!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
@@ -719,11 +767,11 @@
         document.getElementById("cred-aviso-cliente").style.display = "none";
         carregarCrediario();
       } else {
-        const err = await resp.json();
-        alert(`Erro: ${err.detail || 'Falha ao lançar débito'}`);
+        const err = await resp.json().catch(() => ({}));
+        alert(`Erro (${resp.status}): ${err.detail || 'Falha ao lançar débito'}`);
       }
     } catch (e) {
-      alert("Erro ao conectar com o servidor.");
+      alert(`Erro de conexão com o servidor: ${e.message}`);
     } finally {
       btn.innerText = "Lançar Débito na Conta";
       btn.disabled = false;
@@ -761,19 +809,19 @@
       const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
 
-      let textoExtrato = `💈 *BARBER BOONE - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus lançamentos em aberto:\n`;
+      let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus lançamentos em aberto:\n`;
       (d.pedidos || []).forEach(p => {
         const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
         textoExtrato += `\n• *Lançamento #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
       });
-      textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!`;
+      textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`;
 
       const linkCobranca = `https://wa.me/55${zapLimpo}?text=${encodeURIComponent(textoExtrato)}`;
 
       const pedidosHtml = (d.pedidos || []).map(p => `
-        <div style="border-bottom: 1px solid #333; padding: 8px 0; display:flex; justify-content:space-between; align-items:center;">
+        <div style="border-bottom: 1px solid #292929; padding: 8px 0; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <b>Lançamento #${p.pedido_id}</b> (${p.data}) — <span style="color:#f39c12; font-weight:bold;">R$ ${p.valor.toFixed(2)}</span>
+            <b>Lançamento #${p.pedido_id}</b> (${p.data}) — <span style="color:#e74c3c; font-weight:bold;">R$ ${p.valor.toFixed(2)}</span>
             <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
           </div>
           <div style="display:flex; gap:6px;">
@@ -787,12 +835,12 @@
         <div class="card-item crediario-card">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h3 style="margin:0; color:#f39c12;">👤 ${c.nome}</h3>
-              <small style="color:#aaa;">WhatsApp: ${c.telefone || 'N/A'} | CPF: ${c.cpf || 'N/A'}</small>
+              <h3 style="margin:0; color:#e74c3c;">👤 ${c.nome}</h3>
+              <small style="color:#888;">WhatsApp: ${c.telefone || 'N/A'} | CPF: ${c.cpf || 'N/A'}</small>
             </div>
             <div style="text-align:right;">
-              <small style="color:#bbb; display:block; font-size:11px;">Saldo Devedor:</small>
-              <span style="font-size:18px; font-weight:bold; color:#e74c3c;">R$ ${d.total_divida.toFixed(2)}</span>
+              <small style="color:#aaa; display:block; font-size:11px;">Saldo Devedor:</small>
+              <span style="font-size:18px; font-weight:bold; color:#ff4d4d;">R$ ${d.total_divida.toFixed(2)}</span>
             </div>
           </div>
 
@@ -928,8 +976,8 @@
           <div style="display: flex; align-items: center;">
             <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://i.imgur.com/snD8nkl.png'">
             <div>
-              <h4 style="margin: 0 0 2px 0;">${p.nome}</h4>
-              ${p.descricao ? `<small style="color: #bbb; display: block; margin-bottom: 4px; font-size: 11px;">${p.descricao}</small>` : ''}
+              <h4 style="margin: 0 0 2px 0; color:#fff;">${p.nome}</h4>
+              ${p.descricao ? `<small style="color: #888; display: block; margin-bottom: 4px; font-size: 11px;">${p.descricao}</small>` : ''}
               <span style="color: #2ecc71; font-weight: bold;">R$ ${p.preco.toFixed(2)}</span> |
               <small style="color: #aaa;">Estoque: <b>${p.quantidade_estoque}</b></small>
             </div>
@@ -946,7 +994,7 @@
 
   function compartilharProduto(id, nome, preco) {
     const link = `${CATALOGO_BASE_URL}?produto=${id}`;
-    const texto = `Confira nosso produto *${nome}* por apenas *R$ ${preco.toFixed(2)}* na Barber Boone! Peça pelo link: ${link}`;
+    const texto = `Confira *${nome}* por apenas *R$ ${preco.toFixed(2)}* na Infinity 027! Peça online pelo link: ${link}`;
 
     if (navigator.share) {
       navigator.share({ title: nome, text: texto, url: link }).catch(() => {});

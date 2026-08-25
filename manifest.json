@@ -1,13 +1,13 @@
 {
-  "name": "Barber Boone - Painel",
-  "short_name": "BarberBoone",
+  "name": "Infinity 027 - Beauty • Style • Confidence",
+  "short_name": "Infinity027",
   "start_url": "/painel.html",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#f39c12",
+  "background_color": "#0d0d0d",
+  "theme_color": "#e74c3c",
   "icons": [
     {
-      "src": "https://i.imgur.com/LYFvFkx.png",
+      "src": "https://i.imgur.com/snD8nkl.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
