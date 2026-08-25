@@ -6,6 +6,9 @@
   <link rel="manifest" href="/manifest.json">
   <title>Painel do Barbeiro</title>
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: #121212;
@@ -26,11 +29,11 @@
       height: 90px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid #f39c12;
+      border: 2px solid #e74c3c;
     }
     .auth-box, .card-item {
       background: #1e1e1e;
-      padding: 20px;
+      padding: 18px;
       border-radius: 8px;
       margin-bottom: 16px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
@@ -46,21 +49,36 @@
       background: #2a2a2a;
       border: 1px solid #444;
       color: white;
-      border-radius: 4px;
-      box-sizing: border-box;
+      border-radius: 6px;
       font-size: 14px;
       font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #f39c12;
+    }
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #ccc;
+      display: block;
+      margin-bottom: 2px;
     }
     .btn-main {
       background-color: #f39c12;
       color: #121212;
       border: none;
-      padding: 12px 20px;
+      padding: 13px 20px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
       width: 100%;
       font-size: 15px;
+      transition: opacity 0.2s ease;
+    }
+    .btn-main:active {
+      opacity: 0.85;
     }
     .link-toggle {
       color: #f39c12;
@@ -77,7 +95,7 @@
     }
     .nav-btn {
       flex: 1;
-      padding: 10px;
+      padding: 11px 6px;
       background: #2a2a2a;
       color: #aaa;
       border: none;
@@ -85,6 +103,7 @@
       font-weight: bold;
       cursor: pointer;
       font-size: 13px;
+      text-align: center;
     }
     .nav-btn.active {
       background: #f39c12;
@@ -142,7 +161,7 @@
       background-color: #25d366;
       color: #121212;
       text-decoration: none;
-      padding: 6px 12px;
+      padding: 7px 12px;
       border-radius: 4px;
       font-size: 13px;
       font-weight: bold;
@@ -165,10 +184,18 @@
       color: #bbb;
       line-height: 1.6;
     }
-    .grid-2 {
+
+    /* SISTEMA DE GRIDS RESPONSIVOS */
+    .form-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    @media (min-width: 600px) {
+      .form-row.grid-2 {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
     }
   </style>
 </head>
@@ -178,7 +205,7 @@
 
   <!-- CABEÇALHO -->
   <div class="header-logo">
-    <img id="app-logo" src="https://i.imgur.com/snD8nkl.png" alt="Logo Barbearia">
+    <img id="app-logo" src="https://i.imgur.com/snD8nkl.png" alt="Logo Infinity 027">
     <h2 style="margin: 8px 0 0 0; font-size: 18px; color: #f39c12;">Barber Boone</h2>
   </div>
 
@@ -212,7 +239,7 @@
       <button class="nav-btn" id="tab-crediario-btn" onclick="alternarAba('crediario')">💳 Crediário</button>
     </div>
 
-    <!-- 1. PEDIDOS -->
+    <!-- 1. ABA PEDIDOS -->
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 18px;">Pedidos Recebidos</h2>
@@ -224,32 +251,36 @@
       <div id="lista-pedidos">Carregando pedidos...</div>
     </div>
 
-    <!-- 2. PRODUTOS -->
+    <!-- 2. ABA PRODUTOS -->
     <div id="aba-produtos" style="display: none;">
       <div class="card-item" style="border-left-color: #3498db;">
         <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
         <input type="hidden" id="produto-id">
 
-        <label style="font-size: 13px;">Nome do Produto:</label>
+        <label>Nome do Produto:</label>
         <input type="text" id="produto-nome" placeholder="Ex: Pomada Efeito Seco">
 
-        <label style="font-size: 13px;">Descrição do Produto:</label>
+        <label>Descrição do Produto:</label>
         <textarea id="produto-descricao" rows="2" placeholder="Ex: Fixação forte e efeito fosco."></textarea>
 
-        <label style="font-size: 13px;">Preço (R$):</label>
-        <input type="number" step="0.01" id="produto-preco" placeholder="Ex: 35.00">
+        <div class="form-row grid-2">
+          <div>
+            <label>Preço (R$):</label>
+            <input type="number" step="0.01" id="produto-preco" placeholder="Ex: 35.00">
+          </div>
+          <div>
+            <label>Quantidade em Estoque:</label>
+            <input type="number" id="produto-estoque" placeholder="Ex: 10">
+          </div>
+        </div>
 
-        <label style="font-size: 13px;">Quantidade em Estoque:</label>
-        <input type="number" id="produto-estoque" placeholder="Ex: 10">
-
-        <label style="font-size: 13px; font-weight: bold; display: block; margin-top: 10px;">Foto do Produto:</label>
-
+        <label style="font-weight: bold; margin-top: 4px;">Foto do Produto:</label>
         <input type="file" id="input-camera" accept="image/*" capture="environment" style="display: none;" onchange="processarFotoProduto(event)">
         <input type="file" id="input-galeria" accept="image/*" style="display: none;" onchange="processarFotoProduto(event)">
 
-        <div style="display: flex; gap: 10px; margin: 8px 0 12px 0;">
-          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 10px;" onclick="document.getElementById('input-camera').click()">📷 Câmera</button>
-          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 10px;" onclick="document.getElementById('input-galeria').click()">📁 Galeria</button>
+        <div style="display: flex; gap: 10px; margin: 8px 0 14px 0;">
+          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 11px;" onclick="document.getElementById('input-camera').click()">📷 Câmera</button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 11px;" onclick="document.getElementById('input-galeria').click()">📁 Galeria</button>
         </div>
 
         <div id="box-preview-foto" style="display: none; text-align: center; margin-bottom: 12px;">
@@ -268,37 +299,50 @@
       <div id="lista-produtos">Carregando produtos...</div>
     </div>
 
-    <!-- 3. CREDIÁRIO -->
+    <!-- 3. ABA CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
-      <!-- FORMULÁRIO DE LANÇAMENTO MANUAL -->
+      <!-- FORMULÁRIO COM SELEÇÃO DINÂMICA DE PRODUTOS E ALINHAMENTO CORRIGIDO -->
       <div class="card-item" style="border-left-color: #9b59b6;">
         <h3 style="margin-top: 0; color: #f39c12;">➕ Novo Lançamento no Crediário</h3>
 
-        <div class="grid-2">
+        <div class="form-row grid-2">
           <div>
-            <label style="font-size: 12px;">WhatsApp / Telefone:</label>
+            <label>WhatsApp / Telefone:</label>
             <input type="tel" id="cred-telefone" placeholder="Ex: 27999998888" onblur="verificarClientePorTelefone(this.value)">
           </div>
           <div>
-            <label style="font-size: 12px;">Nome do Cliente:</label>
+            <label>Nome do Cliente:</label>
             <input type="text" id="cred-nome" placeholder="Preenchido automático ou digite">
           </div>
         </div>
 
-        <div id="cred-aviso-cliente" style="font-size: 12px; color: #2ecc71; margin-bottom: 8px; display: none;"></div>
+        <div id="cred-aviso-cliente" style="font-size: 12px; color: #2ecc71; margin: -6px 0 10px 0; display: none;"></div>
 
-        <div class="grid-2">
+        <div>
+          <label>Selecione o Produto ou Serviço:</label>
+          <select id="cred-select-produto" onchange="selecionarProdutoCrediario()">
+            <option value="">-- Selecione um produto cadastrado --</option>
+            <option value="outro">➕ [Outro / Serviço Personalizado]</option>
+          </select>
+        </div>
+
+        <div id="box-item-personalizado" style="display: none;">
+          <label>Nome do Serviço ou Item Avulso:</label>
+          <input type="text" id="cred-item-custom" placeholder="Ex: Corte de Cabelo + Barboterapia">
+        </div>
+
+        <div class="form-row grid-2">
           <div>
-            <label style="font-size: 12px;">Item / Descrição do Serviço:</label>
-            <input type="text" id="cred-item" placeholder="Ex: Corte Cabelo + Pomada">
+            <label>Quantidade:</label>
+            <input type="number" id="cred-qtd" value="1" min="1" oninput="calcularTotalLancamento()">
           </div>
           <div>
-            <label style="font-size: 12px;">Valor Total (R$):</label>
-            <input type="number" step="0.01" id="cred-valor" placeholder="Ex: 45.00">
+            <label>Valor Total (R$):</label>
+            <input type="number" step="0.01" id="cred-valor" placeholder="Ex: 35.00">
           </div>
         </div>
 
-        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar na Conta do Cliente</button>
+        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito na Conta</button>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -314,6 +358,7 @@
 <script>
   const API_URL = "https://app-barbearia-api.onrender.com";
   const CATALOGO_BASE_URL = window.location.origin + "/catalogo.html";
+  const CHAVE_PIX_BARBEIRO = "27997834019";
   let tokenJWT = localStorage.getItem("token_barbeiro") || "";
   let produtosLocais = [];
   let imagemBase64 = "";
@@ -418,6 +463,7 @@
     document.getElementById("secao-auth").style.display = "none";
     document.getElementById("secao-painel").style.display = "block";
     carregarPedidos();
+    carregarProdutosPainel();
   }
 
   function alternarAba(aba) {
@@ -431,7 +477,10 @@
 
     if (aba === "pedidos") carregarPedidos();
     if (aba === "produtos") carregarProdutosPainel();
-    if (aba === "crediario") carregarCrediario();
+    if (aba === "crediario") {
+      carregarCrediario();
+      carregarProdutosNoSelectCrediario();
+    }
   }
 
   async function carregarPedidos() {
@@ -553,7 +602,46 @@
     }
   }
 
-  // --- CONTROLE DE CREDIÁRIO ---
+  // --- GESTÃO DE CREDIÁRIO ---
+  function carregarProdutosNoSelectCrediario() {
+    const select = document.getElementById("cred-select-produto");
+    select.innerHTML = `
+      <option value="">-- Selecione um produto cadastrado --</option>
+      ${produtosLocais.map(p => `<option value="${p.id}" data-preco="${p.preco}" data-nome="${p.nome}">${p.nome} — R$ ${p.preco.toFixed(2)} (Estoque: ${p.quantidade_estoque})</option>`).join("")}
+      <option value="outro">➕ [Outro / Serviço Personalizado]</option>
+    `;
+  }
+
+  function selecionarProdutoCrediario() {
+    const select = document.getElementById("cred-select-produto");
+    const val = select.value;
+    const boxCustom = document.getElementById("box-item-personalizado");
+    const campoValor = document.getElementById("cred-valor");
+
+    if (val === "outro") {
+      boxCustom.style.display = "block";
+      campoValor.value = "";
+      campoValor.readOnly = false;
+    } else if (val) {
+      boxCustom.style.display = "none";
+      calcularTotalLancamento();
+    } else {
+      boxCustom.style.display = "none";
+      campoValor.value = "";
+    }
+  }
+
+  function calcularTotalLancamento() {
+    const select = document.getElementById("cred-select-produto");
+    const selectedOpt = select.options[select.selectedIndex];
+    const qtd = parseInt(document.getElementById("cred-qtd").value) || 1;
+
+    if (select.value && select.value !== "outro") {
+      const precoUnit = parseFloat(selectedOpt.getAttribute("data-preco")) || 0;
+      document.getElementById("cred-valor").value = (precoUnit * qtd).toFixed(2);
+    }
+  }
+
   async function verificarClientePorTelefone(tel) {
     const aviso = document.getElementById("cred-aviso-cliente");
     const campoNome = document.getElementById("cred-nome");
@@ -567,7 +655,7 @@
       if (resp.ok) {
         const cliente = await resp.json();
         campoNome.value = cliente.nome;
-        aviso.innerText = `✔ Cliente cadastrado encontrado: ${cliente.nome}`;
+        aviso.innerText = `✔ Cliente encontrado: ${cliente.nome}`;
         aviso.style.display = "block";
       } else {
         aviso.innerText = `ℹ Novo cliente (será cadastrado ao lançar)`;
@@ -581,11 +669,19 @@
   async function lancarCrediarioManual() {
     const telefone = document.getElementById("cred-telefone").value.trim();
     const nome = document.getElementById("cred-nome").value.trim();
-    const descricao_item = document.getElementById("cred-item").value.trim();
+    const select = document.getElementById("cred-select-produto");
+    const qtd = parseInt(document.getElementById("cred-qtd").value) || 1;
     const valor = parseFloat(document.getElementById("cred-valor").value);
 
+    let descricao_item = "";
+    if (select.value === "outro") {
+      descricao_item = document.getElementById("cred-item-custom").value.trim();
+    } else if (select.value) {
+      descricao_item = select.options[select.selectedIndex].getAttribute("data-nome");
+    }
+
     if (!telefone || !nome || !descricao_item || isNaN(valor) || valor <= 0) {
-      alert("Por favor, preencha todos os campos do lançamento corretamente.");
+      alert("Por favor, preencha todos os campos do débito corretamente.");
       return;
     }
 
@@ -600,15 +696,26 @@
           "Content-Type": "application/json",
           "Authorization": `Bearer ${tokenJWT}`
         },
-        body: JSON.stringify({ telefone, nome, descricao_item, valor })
+        body: JSON.stringify({ telefone, nome, descricao_item, valor, quantidade: qtd })
       });
 
       if (resp.ok) {
-        alert("Débito lançado com sucesso na conta do cliente!");
+        const zapLimpo = telefone.replace(/\D/g, '');
+        const msgZap = encodeURIComponent(
+          `💈 *BARBER BOONE - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!`
+        );
+
+        if (confirm("✔ Débito lançado com sucesso!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
+          window.open(`https://wa.me/55${zapLimpo}?text=${msgZap}`, "_blank");
+        }
+
         document.getElementById("cred-telefone").value = "";
         document.getElementById("cred-nome").value = "";
-        document.getElementById("cred-item").value = "";
+        document.getElementById("cred-select-produto").value = "";
+        document.getElementById("cred-item-custom").value = "";
         document.getElementById("cred-valor").value = "";
+        document.getElementById("cred-qtd").value = "1";
+        document.getElementById("box-item-personalizado").style.display = "none";
         document.getElementById("cred-aviso-cliente").style.display = "none";
         carregarCrediario();
       } else {
@@ -618,7 +725,7 @@
     } catch (e) {
       alert("Erro ao conectar com o servidor.");
     } finally {
-      btn.innerText = "Lançar na Conta do Cliente";
+      btn.innerText = "Lançar Débito na Conta";
       btn.disabled = false;
     }
   }
@@ -654,13 +761,12 @@
       const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
 
-      // Monta o extrato formatado para o WhatsApp
       let textoExtrato = `💈 *BARBER BOONE - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus lançamentos em aberto:\n`;
       (d.pedidos || []).forEach(p => {
         const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
-        textoExtrato += `\n• *Pedido #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
+        textoExtrato += `\n• *Lançamento #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
       });
-      textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *27997834019*\nQualquer dúvida estamos à disposição!`;
+      textoExtrato += `\n\n💰 *Total em aberto: R$ ${d.total_divida.toFixed(2)}*\n\nChave PIX para pagamento: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!`;
 
       const linkCobranca = `https://wa.me/55${zapLimpo}?text=${encodeURIComponent(textoExtrato)}`;
 
@@ -802,6 +908,7 @@
       const response = await fetch(`${API_URL}/produtos/catalogo`);
       produtosLocais = await response.json();
       renderizarProdutosPainel();
+      carregarProdutosNoSelectCrediario();
     } catch (e) {
       document.getElementById("lista-produtos").innerHTML = "<p style='color: red;'>Erro ao buscar produtos.</p>";
     }
@@ -815,11 +922,11 @@
     }
 
     container.innerHTML = produtosLocais.map(p => {
-      const foto = p.imagem_url || "https://i.imgur.com/LYFvFkx.png";
+      const foto = p.imagem_url || "https://i.imgur.com/snD8nkl.png";
       return `
         <div class="card-item" style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center;">
-            <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://i.imgur.com/LYFvFkx.png'">
+            <img src="${foto}" class="prod-thumb" alt="${p.nome}" onerror="this.src='https://i.imgur.com/snD8nkl.png'">
             <div>
               <h4 style="margin: 0 0 2px 0;">${p.nome}</h4>
               ${p.descricao ? `<small style="color: #bbb; display: block; margin-bottom: 4px; font-size: 11px;">${p.descricao}</small>` : ''}
@@ -915,7 +1022,7 @@
       descricao: descricao || null,
       preco,
       quantidade_estoque: estoque,
-      imagem_url: imagemBase64 || "https://i.imgur.com/LYFvFkx.png"
+      imagem_url: imagemBase64 || "https://i.imgur.com/snD8nkl.png"
     };
 
     const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
