@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, EmailStr
 
 from models import StatusPagamento, StatusPedido
@@ -97,12 +97,12 @@ class LancamentoManualSchema(BaseModel):
     telefone: str
     nome: str
     descricao_item: str
-    valor: float
+    valor: Union[float, str]
     quantidade: Optional[int] = 1
 
 
 class EditarValorPedidoSchema(BaseModel):
-    novo_valor: float
+    novo_valor: Union[float, str]
 
 
 class PedidoResponseSchema(BaseModel):
@@ -120,4 +120,3 @@ class PedidoResponseSchema(BaseModel):
 
 class AtualizarPagamentoSchema(BaseModel):
     status_pagamento: StatusPagamento
-    

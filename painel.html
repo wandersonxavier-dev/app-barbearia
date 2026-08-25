@@ -294,7 +294,7 @@
         <div class="form-row grid-2">
           <div>
             <label>Preço (R$):</label>
-            <input type="number" step="0.01" id="produto-preco" placeholder="Ex: 35.00">
+            <input type="text" id="produto-preco" placeholder="Ex: 35.00">
           </div>
           <div>
             <label>Quantidade em Estoque:</label>
@@ -365,7 +365,7 @@
           </div>
           <div>
             <label>Valor Total (R$):</label>
-            <input type="number" step="0.01" id="cred-valor" placeholder="Ex: 35.00">
+            <input type="text" id="cred-valor" placeholder="Ex: 35.00">
           </div>
         </div>
 
@@ -427,7 +427,7 @@
         document.getElementById("login-senha").value = senha;
         alternarTelaAuth("login");
       } else {
-        const err = await response.json();
+        const err = await response.json().catch(() => ({}));
         alert(`Erro: ${err.detail || 'Verifique os dados digitados'}`);
       }
     } catch (e) {
@@ -698,7 +698,8 @@
     const nome = document.getElementById("cred-nome").value.trim();
     const select = document.getElementById("cred-select-produto");
     const qtd = parseInt(document.getElementById("cred-qtd").value) || 1;
-    let valor = parseFloat(document.getElementById("cred-valor").value);
+    let valorStr = document.getElementById("cred-valor").value.trim().replace(",", ".");
+    let valor = parseFloat(valorStr);
 
     let descricao_item = "";
     if (select.value === "outro") {
@@ -1057,7 +1058,8 @@
     const id = document.getElementById("produto-id").value;
     const nome = document.getElementById("produto-nome").value.trim();
     const descricao = document.getElementById("produto-descricao").value.trim();
-    const preco = parseFloat(document.getElementById("produto-preco").value);
+    let precoStr = document.getElementById("produto-preco").value.trim().replace(",", ".");
+    const preco = parseFloat(precoStr);
     const estoque = parseInt(document.getElementById("produto-estoque").value);
 
     if (!nome || isNaN(preco) || isNaN(estoque)) {

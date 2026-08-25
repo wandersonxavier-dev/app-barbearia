@@ -363,6 +363,12 @@ def lancamento_manual_crediario(
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
+        # Trata conversão de float/string com segurança
+        try:
+            valor_float = float(str(dados.valor).replace(",", "."))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Valor numérico inválido.")
+
         # 1. Localiza ou cria o cliente com base no telefone informado
         cliente = (
             db.query(models.Cliente)
@@ -376,7 +382,7 @@ def lancamento_manual_crediario(
         elif dados.nome and cliente.nome != dados.nome:
             cliente.nome = dados.nome
 
-        # 2. Localiza ou cria um item avulso para registrar o lançamento
+        # 2. Localiza ou cria o item no catálogo
         produto = (
             db.query(models.Produto)
             .filter(models.Produto.nome == dados.descricao_item)
@@ -385,8 +391,8 @@ def lancamento_manual_crediario(
         if not produto:
             produto = models.Produto(
                 nome=dados.descricao_item,
-                descricao="Lançamento manual no crediário",
-                preco=dados.valor,
+                descricao="Lançamento no crediário",
+                preco=valor_float,
                 quantidade_estoque=999,
             )
             db.add(produto)
@@ -402,7 +408,7 @@ def lancamento_manual_crediario(
         db.flush()
 
         qtd = dados.quantidade if dados.quantidade and dados.quantidade > 0 else 1
-        preco_unit = float(dados.valor) / float(qtd)
+        preco_unit = valor_float / float(qtd)
 
         item_pedido = models.ItemPedido(
             pedido_id=pedido.id,
@@ -418,6 +424,8 @@ def lancamento_manual_crediario(
             "pedido_id": pedido.id,
             "cliente": cliente.nome,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Erro em lancamento_manual_crediario: {e}")
@@ -445,11 +453,16 @@ def editar_valor_pedido(
             status_code=400, detail="Pedido sem itens para alteração"
         )
 
-    pedido.itens[0].preco_unitario = dados.novo_valor
+    try:
+        novo_valor_float = float(str(dados.novo_valor).replace(",", "."))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Valor numérico inválido.")
+
+    pedido.itens[0].preco_unitario = novo_valor_float
     pedido.itens[0].quantidade = 1
     db.commit()
 
-    return {"message": "Valor atualizado com sucesso!", "novo_valor": dados.novo_valor}
+    return {"message": "Valor atualizado com sucesso!", "novo_valor": novo_valor_float}
 
 
 @app.get(
