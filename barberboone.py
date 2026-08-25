@@ -3,7 +3,7 @@ from typing import List
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
@@ -14,26 +14,39 @@ import security
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# 1. Cria tabelas base
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    logger.error(f"Erro ao criar tabelas: {e}")
 
-# Migração automática e segura ao iniciar
-def executar_migracoes():
+
+# 2. Migração segura e não-bloqueante
+def executar_migracoes_seguras():
     try:
-        Base.metadata.create_all(bind=engine)
         with engine.connect() as conn:
-            # 1. Atualiza Enum no PostgreSQL
+            # Atualização do Enum no PostgreSQL
             if "postgresql" in str(engine.url):
                 try:
+                    conn.execute(
+                        text("COMMIT")
+                    )  # Encerra qualquer transação pendente
                     conn.execute(
                         text(
                             "ALTER TYPE statuspagamento ADD VALUE IF NOT EXISTS 'fiado';"
                         )
                     )
                     conn.commit()
-                except Exception as e:
-                    logger.warning(f"Aviso Enum statuspagamento: {e}")
+                except Exception as ex_enum:
+                    logger.warning(f"Aviso Enum: {ex_enum}")
 
-            # 2. Garante todas as colunas novas na tabela clientes
-            colunas = [
+            # Identifica colunas já existentes na tabela clientes
+            inspector = inspect(engine)
+            colunas_existentes = [
+                col["name"] for col in inspector.get_columns("clientes")
+            ]
+
+            novas_colunas = [
                 ("cpf", "VARCHAR(20)"),
                 ("rg", "VARCHAR(20)"),
                 ("data_nascimento", "VARCHAR(15)"),
@@ -50,29 +63,23 @@ def executar_migracoes():
                 ("cep", "VARCHAR(20)"),
             ]
 
-            for nome, tipo in colunas:
-                try:
-                    if "sqlite" in str(engine.url):
+            for nome, tipo in novas_colunas:
+                if nome not in colunas_existentes:
+                    try:
                         conn.execute(
                             text(
                                 f"ALTER TABLE clientes ADD COLUMN {nome} {tipo};"
                             )
                         )
-                    else:
-                        conn.execute(
-                            text(
-                                f"ALTER TABLE clientes ADD COLUMN IF NOT EXISTS {nome} {tipo};"
-                            )
-                        )
-                    conn.commit()
-                except Exception:
-                    pass  # Coluna já existe
-        logger.info("Migrações de banco executadas com sucesso.")
+                        conn.commit()
+                        logger.info(f"Coluna {nome} adicionada com sucesso.")
+                    except Exception as ex_col:
+                        logger.warning(f"Erro ao adicionar {nome}: {ex_col}")
     except Exception as err:
-        logger.error(f"Erro nas migrações: {err}")
+        logger.error(f"Erro geral de migracao: {err}")
 
 
-executar_migracoes()
+executar_migracoes_seguras()
 
 app = FastAPI(
     title="App Barber API",
@@ -80,6 +87,13 @@ app = FastAPI(
     version="1.1.0",
 )
 
+# Endpoint de verificação de saúde da API
+@app.get("/health", tags=["Geral"])
+def health_check():
+    return {"status": "online"}
+
+
+# Configuração de CORS aberta
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
