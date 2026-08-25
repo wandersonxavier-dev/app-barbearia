@@ -386,7 +386,6 @@
   let produtos = [];
   let carrinho = {};
 
-  // Restaura dados salvos localmente
   document.getElementById("cliente-nome").value = localStorage.getItem("cliente_nome") || "";
   document.getElementById("cliente-telefone").value = localStorage.getItem("cliente_tel") || "";
   document.getElementById("pix-key-display").value = CHAVE_PIX_BARBEIRO;
@@ -537,7 +536,6 @@
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
-      // Coleta dados completos da ficha
       const payloadCliente = {
         nome: nome,
         telefone: telefone,
@@ -565,12 +563,9 @@
       if (!respCliente.ok) throw new Error("Falha ao registrar cadastro do cliente.");
       const clienteData = await respCliente.json();
 
-      let statusPagamentoBackend = "pendente";
-      if (formaPagamento === "fiado") statusPagamentoBackend = "fiado";
-
       const payloadPedido = {
         cliente_id: clienteData.id,
-        status_pagamento: statusPagamentoBackend,
+        status_pagamento: "pendente",
         itens: itens
       };
 
@@ -587,8 +582,6 @@
           alert(`🎉 Pedido #${ped.id} registrado! Envie o comprovante pelo WhatsApp.`);
           const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
           window.open(`https://wa.me/${WHATSAPP_BARBEIRO}?text=${msg}`, "_blank");
-        } else if (formaPagamento === "fiado") {
-          alert(`📒 Pedido #${ped.id} registrado no Fiado com sucesso!`);
         } else {
           alert(`🎉 Pedido #${ped.id} registrado com sucesso! Pagamento na retirada.`);
         }
