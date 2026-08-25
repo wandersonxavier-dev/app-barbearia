@@ -25,17 +25,27 @@ except Exception as e:
 def executar_migracoes_seguras():
     try:
         with engine.connect() as conn:
+            # Garante que o PostgreSQL aceite todos os formatos de enum no banco legado
             if "postgresql" in str(engine.url):
-                try:
-                    conn.execute(text("COMMIT"))
-                    conn.execute(
-                        text(
-                            "ALTER TYPE statuspagamento ADD VALUE IF NOT EXISTS 'fiado';"
+                for val in ["fiado", "FIADO", "pendente", "PENDENTE", "pago", "PAGO"]:
+                    try:
+                        conn.execute(text("COMMIT"))
+                        conn.execute(
+                            text(f"ALTER TYPE statuspagamento ADD VALUE IF NOT EXISTS '{val}';")
                         )
-                    )
-                    conn.commit()
-                except Exception as ex_enum:
-                    logger.warning(f"Aviso Enum: {ex_enum}")
+                        conn.commit()
+                    except Exception:
+                        pass
+
+                for val_ped in ["solicitado", "SOLICITADO", "entregue", "ENTREGUE", "cancelado", "CANCELADO"]:
+                    try:
+                        conn.execute(text("COMMIT"))
+                        conn.execute(
+                            text(f"ALTER TYPE statuspedido ADD VALUE IF NOT EXISTS '{val_ped}';")
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
 
             inspector = inspect(engine)
             colunas_existentes = [
@@ -80,7 +90,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.0",
+    version="1.2.1",
 )
 
 
@@ -363,13 +373,12 @@ def lancamento_manual_crediario(
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        # Trata conversão de float/string com segurança
         try:
             valor_float = float(str(dados.valor).replace(",", "."))
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente com base no telefone informado
+        # 1. Localiza ou cria o cliente
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -382,7 +391,7 @@ def lancamento_manual_crediario(
         elif dados.nome and cliente.nome != dados.nome:
             cliente.nome = dados.nome
 
-        # 2. Localiza ou cria o item no catálogo
+        # 2. Localiza ou cria o produto avulso
         produto = (
             db.query(models.Produto)
             .filter(models.Produto.nome == dados.descricao_item)
@@ -391,14 +400,14 @@ def lancamento_manual_crediario(
         if not produto:
             produto = models.Produto(
                 nome=dados.descricao_item,
-                descricao="Lançamento no crediário",
+                descricao="Lançamento manual no crediário",
                 preco=valor_float,
                 quantidade_estoque=999,
             )
             db.add(produto)
             db.flush()
 
-        # 3. Cria o pedido com status FIADO e ENTREGUE
+        # 3. Cria o pedido com status FIADO
         pedido = models.Pedido(
             cliente_id=cliente.id,
             status_pagamento=models.StatusPagamento.FIADO,

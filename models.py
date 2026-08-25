@@ -1,30 +1,30 @@
-from datetime import datetime
-import enum
+from enum import Enum
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum as SqlEnum,
     Float,
     ForeignKey,
     Integer,
     String,
     Text,
+    Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from database import Base
 
 
-class StatusPagamento(str, enum.Enum):
-    PAGO = "pago"
-    PENDENTE = "pendente"
-    FIADO = "fiado"
-
-
-class StatusPedido(str, enum.Enum):
+class StatusPedido(str, Enum):
     SOLICITADO = "solicitado"
     ENTREGUE = "entregue"
     CANCELADO = "cancelado"
+
+
+class StatusPagamento(str, Enum):
+    PENDENTE = "pendente"
+    PAGO = "pago"
+    FIADO = "fiado"
 
 
 class Usuario(Base):
@@ -41,9 +41,7 @@ class Cliente(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
-    telefone = Column(String(20), unique=True, nullable=False)
-
-    # Novos campos da ficha física
+    telefone = Column(String(20), unique=True, index=True, nullable=False)
     cpf = Column(String(20), nullable=True)
     rg = Column(String(20), nullable=True)
     data_nascimento = Column(String(15), nullable=True)
@@ -69,8 +67,10 @@ class Produto(Base):
     nome = Column(String(100), nullable=False)
     descricao = Column(Text, nullable=True)
     preco = Column(Float, nullable=False)
-    quantidade_estoque = Column(Integer, default=0)
+    quantidade_estoque = Column(Integer, nullable=False, default=0)
     imagem_url = Column(Text, nullable=True)
+
+    itens_pedido = relationship("ItemPedido", back_populates="produto")
 
 
 class Pedido(Base):
@@ -79,12 +79,28 @@ class Pedido(Base):
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     status_pagamento = Column(
-        SqlEnum(StatusPagamento), default=StatusPagamento.PENDENTE
+        SQLEnum(
+            StatusPagamento,
+            name="statuspagamento",
+            values_callable=lambda obj: [e.value for e in obj],
+            native_enum=False,
+        ),
+        default=StatusPagamento.PENDENTE,
+        nullable=False,
     )
     status_pedido = Column(
-        SqlEnum(StatusPedido), default=StatusPedido.SOLICITADO
+        SQLEnum(
+            StatusPedido,
+            name="statuspedido",
+            values_callable=lambda obj: [e.value for e in obj],
+            native_enum=False,
+        ),
+        default=StatusPedido.SOLICITADO,
+        nullable=False,
     )
-    data_criacao = Column(DateTime, default=datetime.utcnow)
+    data_criacao = Column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     cliente = relationship("Cliente", back_populates="pedidos")
     itens = relationship(
@@ -98,8 +114,8 @@ class ItemPedido(Base):
     id = Column(Integer, primary_key=True, index=True)
     pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=False)
     produto_id = Column(Integer, ForeignKey("produtos.id"), nullable=False)
-    quantidade = Column(Integer, default=1)
+    quantidade = Column(Integer, nullable=False, default=1)
     preco_unitario = Column(Float, nullable=False)
 
     pedido = relationship("Pedido", back_populates="itens")
-    produto = relationship("Produto")
+    produto = relationship("Produto", back_populates="itens_pedido")
