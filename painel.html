@@ -632,12 +632,15 @@
     let totalPagoAVista = 0;
     if (Array.isArray(pedidos)) {
       pedidos.forEach(p => {
-        const isPago = String(p.status_pagamento).toLowerCase() === "pago";
-        const isNaoCancelado = String(p.status_pedido).toLowerCase() !== "cancelado";
-        if (isPago && isNaoCancelado) {
-          (p.itens || []).forEach(it => {
-            totalPagoAVista += (it.quantidade || 0) * (it.preco_unitario || 0);
-          });
+        const statusPag = String(p.status_pagamento || '').toLowerCase();
+        const statusPed = String(p.status_pedido || '').toLowerCase();
+
+        if (statusPed !== "cancelado" && statusPag !== "fiado") {
+          if (statusPag === "pago") {
+            (p.itens || []).forEach(it => {
+              totalPagoAVista += (it.quantidade || 0) * (it.preco_unitario || 0);
+            });
+          }
         }
       });
     }
@@ -665,7 +668,6 @@
         total += subtotal;
         const nomeProd = item.produto ? item.produto.nome : `Produto #${item.produto_id}`;
 
-        // Formata os itens para o texto detalhado do WhatsApp
         textoItensZap += `\n• *${nomeProd}* (R$ ${item.preco_unitario.toFixed(2)})\n  ↳ ${item.quantidade} unidade${item.quantidade > 1 ? 's' : ''}\n`;
 
         return `<div>• <b>${nomeProd}</b> — ${item.quantidade}x (R$ ${item.preco_unitario.toFixed(2)})</div>`;
@@ -675,7 +677,6 @@
       const isCancelado = String(p.status_pedido).toLowerCase() === "cancelado";
       const isFiado = String(p.status_pagamento).toLowerCase() === "fiado";
 
-      // Mensagem completa e detalhada para o cliente no WhatsApp
       const msgCompletaZap = `💈 *INFINITY 027 - PEDIDO PRONTO*\nOlá, *${clienteNome}*!\n\nSeu *Pedido #${p.id}* no valor total de *R$ ${total.toFixed(2)}* está pronto para retirada!\n\n📋 *Itens inclusos:*${textoItensZap}\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`;
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${encodeURIComponent(msgCompletaZap)}` : "#";
 
@@ -696,7 +697,7 @@
             </div>
             <div style="display: flex; gap: 6px;">
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
-              <span class="badge badge-${statusPagamentoStr}" title="Alterar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${statusPagamentoStr}')">${labelPagamento} 🔄</span>
+              <span class="badge badge-${statusPagamentoStr}" title="Clique para alterar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${statusPagamentoStr}')">${labelPagamento} 🔄</span>
             </div>
           </div>
 
@@ -986,7 +987,7 @@
               <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button class="btn-action btn-edit" title="Editar Valor deste lançamento" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
+              <button class="btn-action btn-edit" title="Ajustar valor (Somar ou Alterar)" onclick="ajustarValorLancamento(${p.pedido_id}, ${p.valor})">➕/✏ R$</button>
               <button class="btn-action btn-green" title="Quitar apenas este lançamento" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
             </div>
           </div>
@@ -1062,14 +1063,38 @@
     }
   }
 
-  async function editarValorLancamento(pedidoId, valorAtual) {
-    const novoValorStr = prompt(`Informe o novo valor para o Lançamento #${pedidoId}:`, valorAtual.toFixed(2));
-    if (novoValorStr === null) return;
+  async function ajustarValorLancamento(pedidoId, valorAtual) {
+    const promptMsg = `Lançamento #${pedidoId}\nValor atual: R$ ${valorAtual.toFixed(2)}\n\n` +
+      `• Para SOMAR um valor extra: digite o valor a adicionar (ex: 20 ou +20)\n` +
+      `• Para DEFINIR um novo valor total: digite o valor final direto\n\n` +
+      `Informe o valor:`;
 
-    const novoValor = parseFloat(novoValorStr.replace(",", "."));
-    if (isNaN(novoValor) || novoValor <= 0) {
-      alert("Valor inválido.");
-      return;
+    const inputStr = prompt(promptMsg, "");
+    if (inputStr === null || inputStr.trim() === "") return;
+
+    const textoLimpo = inputStr.trim().replace(",", ".");
+    let novoValorCalculado = 0;
+
+    if (textoLimpo.startsWith("+")) {
+      const valorAdicional = parseFloat(textoLimpo.replace("+", ""));
+      if (isNaN(valorAdicional) || valorAdicional <= 0) {
+        alert("Valor inválido.");
+        return;
+      }
+      novoValorCalculado = valorAtual + valorAdicional;
+    } else {
+      const valorDigitado = parseFloat(textoLimpo);
+      if (isNaN(valorDigitado) || valorDigitado <= 0) {
+        alert("Valor inválido.");
+        return;
+      }
+
+      // Se o usuário digitou um valor menor que o atual ou maior querendo somar, confirma com ele
+      if (confirm(`Deseja SOMAR R$ ${valorDigitado.toFixed(2)} ao valor atual de R$ ${valorAtual.toFixed(2)}?\n\n(Clique em 'OK' para Somar totalizando R$ ${(valorAtual + valorDigitado).toFixed(2)} ou 'Cancelar' para Definir exatamente R$ ${valorDigitado.toFixed(2)})`)) {
+        novoValorCalculado = valorAtual + valorDigitado;
+      } else {
+        novoValorCalculado = valorDigitado;
+      }
     }
 
     try {
@@ -1079,12 +1104,13 @@
           "Content-Type": "application/json",
           "Authorization": `Bearer ${tokenJWT}`
         },
-        body: JSON.stringify({ novo_valor: novoValor })
+        body: JSON.stringify({ novo_valor: novoValorCalculado })
       });
 
       if (resp.ok) {
-        alert("Valor atualizado com sucesso!");
+        alert(`✔ Valor do Lançamento #${pedidoId} atualizado para R$ ${novoValorCalculado.toFixed(2)}!`);
         carregarCrediario();
+        carregarPedidos();
       } else {
         alert("Falha ao atualizar valor.");
       }
@@ -1125,6 +1151,7 @@
       });
 
       if (response.ok) {
+        alert("✔ Pedido entregue e estoque atualizado!");
         carregarPedidos();
         carregarProdutosPainel();
       }
