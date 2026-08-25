@@ -161,7 +161,7 @@
     .badge-cancelado { background: #7f8c8d; color: #fff; }
     .badge-pendente { background: #c0392b; color: #fff; }
     .badge-pago { background: #2980b9; color: #fff; }
-    .badge-fiado { background: #962d22; color: #fff; }
+    .badge-fiado { background: #8e44ad; color: #fff; }
     .itens-lista {
       margin: 12px 0;
       background: #1e1e1e;
@@ -332,7 +332,7 @@
     <!-- 3. ABA CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
       <div class="card-item" style="border-left-color: #e74c3c;">
-        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento de Fiado / Serviço</h3>
+        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento no Crediário</h3>
 
         <div class="form-row grid-2">
           <div>
@@ -371,7 +371,7 @@
           </div>
         </div>
 
-        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito no Caderno</button>
+        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito no Crediário</button>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -602,7 +602,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <small style="color: #777;">${dataFormatada}</small>
             <div style="display: flex; gap: 6px;">
-              ${!isFiado && !isCancelado ? `<button class="btn-action btn-fiado-move" onclick="moverPedidoCrediario(${p.id})">💳 Marcar como Fiado</button>` : ''}
+              ${!isFiado && !isCancelado ? `<button class="btn-action btn-fiado-move" onclick="moverPedidoCrediario(${p.id})">💳 Mover para Crediário</button>` : ''}
               ${!isEntregue && !isCancelado ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar</button>` : ''}
               ${!isCancelado ? `<button class="btn-action btn-danger" onclick="cancelarPedido(${p.id})">✖ Cancelar</button>` : '<span style="color: #7f8c8d; font-weight: bold;">Cancelado</span>'}
               ${isEntregue ? '<span style="color: #2ecc71; font-weight: bold; margin-left: 4px;">✔ Entregue</span>' : ''}
@@ -614,7 +614,7 @@
   }
 
   async function moverPedidoCrediario(pedidoId) {
-    if (!confirm(`Deseja marcar o Pedido #${pedidoId} como FIADO e transferir para o Caderno de Crediário?`)) return;
+    if (!confirm(`Deseja registrar o Pedido #${pedidoId} no CREDIÁRIO e transferir para a conta do cliente?`)) return;
 
     try {
       const resp = await fetch(`${API_URL}/pedidos/${pedidoId}/mover-crediario`, {
@@ -623,7 +623,7 @@
       });
 
       if (resp.ok) {
-        alert("✔ Pedido transferido para o Crediário!");
+        alert("✔ Pedido transferido para o Crediário com sucesso!");
         carregarPedidos();
         carregarCrediario();
       } else {
@@ -786,7 +786,7 @@
           `💈 *INFINITY 027 - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`
         );
 
-        if (confirm("✔ Débito lançado com sucesso no caderno!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
+        if (confirm("✔ Débito lançado com sucesso no crediário!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
           window.open(`https://wa.me/55${zapLimpo}?text=${msgZap}`, "_blank");
         }
 
@@ -808,7 +808,7 @@
     } catch (e) {
       alert(`Erro de conexão com o servidor: ${e.message}`);
     } finally {
-      btn.innerText = "Lançar Débito no Caderno";
+      btn.innerText = "Lançar Débito no Crediário";
       btn.disabled = false;
     }
   }
@@ -850,7 +850,7 @@
       const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
 
-      let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus débitos em aberto:\n`;
+      let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus débitos em aberto no Crediário:\n`;
       (d.pedidos || []).forEach(p => {
         const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
         textoExtrato += `\n• *Lançamento #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
@@ -867,7 +867,7 @@
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn-action btn-edit" title="Editar Valor deste lançamento" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
-            <button class="btn-action btn-green" title="Quitar apenas este pedido" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
+            <button class="btn-action btn-green" title="Quitar apenas este lançamento" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
           </div>
         </div>
       `).join("");
