@@ -101,8 +101,8 @@
       border-left-color: #7f8c8d;
       opacity: 0.5;
     }
-    .card-item.fiado-card {
-      border-left-color: #e74c3c;
+    .card-item.crediario-card {
+      border-left-color: #9b59b6;
     }
     .badge {
       display: inline-block;
@@ -204,7 +204,7 @@
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
       <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos</button>
-      <button class="nav-btn" id="tab-fiados-btn" onclick="alternarAba('fiados')">📒 Fiados</button>
+      <button class="nav-btn" id="tab-crediario-btn" onclick="alternarAba('crediario')">💳 Crediário</button>
     </div>
 
     <!-- 1. PEDIDOS -->
@@ -263,13 +263,13 @@
       <div id="lista-produtos">Carregando produtos...</div>
     </div>
 
-    <!-- 3. FIADOS (NOVA ABA) -->
-    <div id="aba-fiados" style="display: none;">
+    <!-- 3. CREDIÁRIO / CONTA CLIENTE -->
+    <div id="aba-crediario" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px;">📒 Controle de Fiados</h2>
-        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarFiados()">🔄 Atualizar</button>
+        <h2 style="margin: 0; font-size: 18px;">💳 Gestão de Crediário (Contas a Prazo)</h2>
+        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarCrediario()">🔄 Atualizar</button>
       </div>
-      <div id="lista-fiados">Carregando fiados...</div>
+      <div id="lista-crediario">Carregando registros do crediário...</div>
     </div>
   </div>
 
@@ -384,15 +384,15 @@
   function alternarAba(aba) {
     document.getElementById("aba-pedidos").style.display = aba === "pedidos" ? "block" : "none";
     document.getElementById("aba-produtos").style.display = aba === "produtos" ? "block" : "none";
-    document.getElementById("aba-fiados").style.display = aba === "fiados" ? "block" : "none";
+    document.getElementById("aba-crediario").style.display = aba === "crediario" ? "block" : "none";
 
     document.getElementById("tab-pedidos-btn").classList.toggle("active", aba === "pedidos");
     document.getElementById("tab-produtos-btn").classList.toggle("active", aba === "produtos");
-    document.getElementById("tab-fiados-btn").classList.toggle("active", aba === "fiados");
+    document.getElementById("tab-crediario-btn").classList.toggle("active", aba === "crediario");
 
     if (aba === "pedidos") carregarPedidos();
     if (aba === "produtos") carregarProdutosPainel();
-    if (aba === "fiados") carregarFiados();
+    if (aba === "crediario") carregarCrediario();
   }
 
   async function carregarPedidos() {
@@ -443,6 +443,8 @@
       if (isEntregue) statusClasse = "entregue";
       if (isCancelado) statusClasse = "cancelado";
 
+      const labelPagamento = p.status_pagamento === "fiado" ? "Crediário" : p.status_pagamento;
+
       return `
         <div class="card-item ${statusClasse}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -452,11 +454,10 @@
             </div>
             <div style="display: flex; gap: 6px;">
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
-              <span class="badge badge-${p.status_pagamento}" title="Alterar status" onclick="alternarStatusPagamento(${p.id}, '${p.status_pagamento}')">${p.status_pagamento} 🔄</span>
+              <span class="badge badge-${p.status_pagamento}" title="Alterar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${p.status_pagamento}')">${labelPagamento} 🔄</span>
             </div>
           </div>
 
-          <!-- Resumo da Ficha do Cliente -->
           <div class="ficha-box">
             <b>Dados do Cliente:</b> Tel: ${clienteTel || 'N/I'} | CPF: ${c.cpf || 'N/I'} | RG: ${c.rg || 'N/I'} | Nasc: ${c.data_nascimento || 'N/I'}<br>
             Endereço: ${c.endereco || 'N/I'}, Nº ${c.numero || 'S/N'} - ${c.bairro || 'N/I'}, ${c.cidade || ''} (CEP: ${c.cep || 'N/I'})
@@ -483,8 +484,9 @@
     const opcoes = ["pendente", "pago", "fiado"];
     const proximoIndex = (opcoes.indexOf(statusAtual) + 1) % opcoes.length;
     const novoStatus = opcoes[proximoIndex];
+    const nomeAmigavel = novoStatus === "fiado" ? "CREDIÁRIO (A PRAZO)" : novoStatus.toUpperCase();
 
-    if (!confirm(`Alterar pagamento do Pedido #${pedidoId} para '${novoStatus.toUpperCase()}'?`)) return;
+    if (!confirm(`Alterar pagamento do Pedido #${pedidoId} para '${nomeAmigavel}'?`)) return;
 
     try {
       const response = await fetch(`${API_URL}/pedidos/${pedidoId}/pagamento`, {
@@ -498,37 +500,37 @@
 
       if (response.ok) {
         carregarPedidos();
-        if (document.getElementById("aba-fiados").style.display === "block") carregarFiados();
+        if (document.getElementById("aba-crediario").style.display === "block") carregarCrediario();
       }
     } catch (e) {
       alert("Erro ao atualizar pagamento.");
     }
   }
 
-  // --- CONTROLE DE FIADOS ---
-  async function carregarFiados() {
+  // --- CONTROLE DE CREDIÁRIO ---
+  async function carregarCrediario() {
     try {
       const response = await fetch(`${API_URL}/fiados`, {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
       });
       const devedores = await response.json();
-      renderizarFiados(devedores);
+      renderizarCrediario(devedores);
     } catch (e) {
-      document.getElementById("lista-fiados").innerHTML = "<p style='color: red;'>Erro ao buscar fiados.</p>";
+      document.getElementById("lista-crediario").innerHTML = "<p style='color: red;'>Erro ao buscar crediário.</p>";
     }
   }
 
-  function renderizarFiados(devedores) {
-    const container = document.getElementById("lista-fiados");
+  function renderizarCrediario(devedores) {
+    const container = document.getElementById("lista-crediario");
     if (devedores.length === 0) {
-      container.innerHTML = "<p style='color:#2ecc71; font-weight:bold;'>🎉 Nenhum cliente com fiado pendente no momento!</p>";
+      container.innerHTML = "<p style='color:#2ecc71; font-weight:bold;'>🎉 Nenhuma conta em aberto no crediário no momento!</p>";
       return;
     }
 
     container.innerHTML = devedores.map(d => {
       const c = d.cliente;
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
-      const msgCobranca = encodeURIComponent(`Olá ${c.nome}, tudo bem? Passando para lembrar sobre seu saldo em aberto de R$ ${d.total_divida.toFixed(2)} na Barber Boone.`);
+      const msgCobranca = encodeURIComponent(`Olá ${c.nome}, tudo bem? Passando para lembrar do seu saldo em aberto de R$ ${d.total_divida.toFixed(2)} no crediário da Barber Boone.`);
       const linkCobranca = `https://wa.me/55${zapLimpo}?text=${msgCobranca}`;
 
       const pedidosHtml = d.pedidos.map(p => `
@@ -537,18 +539,19 @@
             <b>Pedido #${p.pedido_id}</b> (${p.data}) - R$ ${p.valor.toFixed(2)}
             <div style="font-size:11px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
           </div>
-          <button class="btn-action btn-green" onclick="quitarPedidoFiado(${p.pedido_id})">✔ Quitar</button>
+          <button class="btn-action btn-green" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar Conta</button>
         </div>
       `).join("");
 
       return `
-        <div class="card-item fiado-card">
+        <div class="card-item crediario-card">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h3 style="margin:0; color:#e74c3c;">👤 ${c.nome}</h3>
+              <h3 style="margin:0; color:#f39c12;">👤 ${c.nome}</h3>
               <small style="color:#aaa;">WhatsApp: ${c.telefone || 'N/A'} | CPF: ${c.cpf || 'N/A'}</small>
             </div>
             <div style="text-align:right;">
+              <small style="color:#bbb; display:block; font-size:11px;">Saldo Devedor:</small>
               <span style="font-size:18px; font-weight:bold; color:#e74c3c;">R$ ${d.total_divida.toFixed(2)}</span>
             </div>
           </div>
@@ -559,19 +562,19 @@
           </div>
 
           <div class="itens-lista">
-            <b>Compras Fiado:</b>
+            <b>Lançamentos a Prazo:</b>
             ${pedidosHtml}
           </div>
 
           <div style="text-align:right; margin-top:8px;">
-            <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Cobrar via WhatsApp</a>
+            <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Enviar Lembrete / Extrato</a>
           </div>
         </div>
       `;
     }).join("");
   }
 
-  async function quitarPedidoFiado(pedidoId) {
+  async function quitarPedidoCrediario(pedidoId) {
     if (!confirm(`Confirmar o recebimento e quitar o Pedido #${pedidoId}?`)) return;
 
     try {
@@ -585,11 +588,11 @@
       });
 
       if (response.ok) {
-        alert("Pedido marcado como PAGO com sucesso!");
-        carregarFiados();
+        alert("Conta quitada e marcada como PAGA!");
+        carregarCrediario();
       }
     } catch (e) {
-      alert("Erro ao quitar pedido.");
+      alert("Erro ao quitar conta do crediário.");
     }
   }
 
