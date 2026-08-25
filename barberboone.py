@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import inspect, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import Base, engine, get_db
 import models
@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.5",
+    version="1.2.6",
 )
 
 
@@ -313,16 +313,11 @@ def excluir_produto(
 
 
 # ==========================================
-# 4. PEDIDOS E LANÇAMENTO MANUAL DE CREDIÁRIO
+# 4. PEDIDOS E CREDIÁRIO
 # ==========================================
 
 
-@app.post(
-    "/pedidos/publico",
-    response_model=schemas.PedidoResponseSchema,
-    status_code=status.HTTP_201_CREATED,
-    tags=["Pedidos"],
-)
+@app.post("/pedidos/publico", tags=["Pedidos"])
 def criar_pedido_web(
     dados: schemas.PedidoCriarPublicoSchema, db: Session = Depends(get_db)
 ):
@@ -369,8 +364,7 @@ def criar_pedido_web(
         db.add(item_banco)
 
     db.commit()
-    db.refresh(pedido)
-    return pedido
+    return {"message": "Pedido registrado com sucesso!", "id": pedido.id}
 
 
 @app.post("/pedidos/manual", tags=["Crediário"])
@@ -385,7 +379,7 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente com base no telefone informado
+        # 1. Localiza ou cria o cliente
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -398,7 +392,7 @@ def lancamento_manual_crediario(
         elif dados.nome and cliente.nome != dados.nome:
             cliente.nome = dados.nome
 
-        # 2. Localiza ou cria o produto avulso
+        # 2. Localiza ou cria o produto
         produto = (
             db.query(models.Produto)
             .filter(models.Produto.nome == dados.descricao_item)
@@ -487,8 +481,13 @@ def listar_pedidos(
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
+        # Carregamento Eager (Joinedload) para garantir que cliente, itens e produtos venham juntos sem falhar
         pedidos_db = (
             db.query(models.Pedido)
+            .options(
+                joinedload(models.Pedido.cliente),
+                joinedload(models.Pedido.itens).joinedload(models.ItemPedido.produto),
+            )
             .order_by(models.Pedido.data_criacao.desc())
             .all()
         )
@@ -546,7 +545,7 @@ def listar_pedidos(
 
         return resultado
     except Exception as e:
-        logger.error(f"Erro em listar_pedidos: {e}")
+        logger.error(f"Erro em listar_pedidos: {e}", exc_info=True)
         return []
 
 
@@ -558,6 +557,10 @@ def listar_crediario(
     try:
         todos_pedidos = (
             db.query(models.Pedido)
+            .options(
+                joinedload(models.Pedido.cliente),
+                joinedload(models.Pedido.itens).joinedload(models.ItemPedido.produto),
+            )
             .filter(
                 models.Pedido.status_pedido != "cancelado"
             )
@@ -565,7 +568,6 @@ def listar_crediario(
             .all()
         )
 
-        # Filtro tolerante a qualquer variação de texto para 'fiado'
         pedidos_crediario = [
             p
             for p in todos_pedidos
@@ -630,7 +632,7 @@ def listar_crediario(
 
         return list(clientes_crediario.values())
     except Exception as e:
-        logger.error(f"Erro em /fiados: {e}")
+        logger.error(f"Erro em /fiados: {e}", exc_info=True)
         return []
 
 
