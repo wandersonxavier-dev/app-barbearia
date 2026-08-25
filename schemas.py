@@ -101,6 +101,11 @@ class LancamentoManualSchema(BaseModel):
     quantidade: Optional[int] = 1
 
 
+class AbatimentoCrediarioSchema(BaseModel):
+    cliente_id: int
+    valor_pago: Union[float, str]
+
+
 class EditarValorPedidoSchema(BaseModel):
     novo_valor: Union[float, str]
 

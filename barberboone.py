@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.9",
+    version="1.3.0",
 )
 
 
@@ -379,7 +379,7 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente com base no telefone informado
+        # 1. Localiza ou cria o cliente com base no telefone
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -443,6 +443,89 @@ def lancamento_manual_crediario(
             status_code=500,
             detail=f"Erro interno ao salvar débito: {str(e)}",
         )
+
+
+@app.post("/fiados/abater", tags=["Crediário"])
+def abater_pagamento_crediario(
+    dados: schemas.AbatimentoCrediarioSchema,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    try:
+        try:
+            valor_pago = float(str(dados.valor_pago).replace(",", "."))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Valor de pagamento inválido.")
+
+        if valor_pago <= 0:
+            raise HTTPException(status_code=400, detail="O valor de abatimento deve ser maior que zero.")
+
+        # Busca todos os pedidos pendentes no crediário desse cliente
+        pedidos_cliente = (
+            db.query(models.Pedido)
+            .filter(
+                models.Pedido.cliente_id == dados.cliente_id,
+                models.Pedido.status_pedido != "cancelado"
+            )
+            .order_by(models.Pedido.data_criacao.asc())
+            .all()
+        )
+
+        pedidos_fiados = [
+            p for p in pedidos_cliente if "fiado" in str(p.status_pagamento).lower()
+        ]
+
+        if not pedidos_fiados:
+            raise HTTPException(status_code=404, detail="Nenhum débito em aberto para este cliente.")
+
+        saldo_para_abater = valor_pago
+
+        for p in pedidos_fiados:
+            total_pedido = sum((it.quantidade or 0) * (it.preco_unitario or 0.0) for it in p.itens)
+
+            if saldo_para_abater >= total_pedido:
+                # Quita o pedido completamente
+                p.status_pagamento = "pago"
+                saldo_para_abater -= total_pedido
+            else:
+                # Abate parcialmente diminuindo o valor do item principal
+                if p.itens:
+                    novo_total = total_pedido - saldo_para_abater
+                    p.itens[0].preco_unitario = novo_total
+                    p.itens[0].quantidade = 1
+                    saldo_para_abater = 0.0
+                break
+
+        db.commit()
+        return {"message": "Abatimento realizado com sucesso!", "valor_abatido": valor_pago}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro em abater_pagamento_crediario: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao processar abatimento: {str(e)}")
+
+
+@app.patch("/pedidos/{pedido_id}/mover-crediario", tags=["Crediário"])
+def mover_pedido_para_crediario(
+    pedido_id: int,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    pedido = db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    # Marca como fiado e entrega para dar baixa no estoque se necessário
+    pedido.status_pagamento = "fiado"
+    if str(pedido.status_pedido).lower() != "entregue":
+        for item in pedido.itens:
+            if item.produto and item.produto.quantidade_estoque >= item.quantidade:
+                item.produto.quantidade_estoque -= item.quantidade
+        pedido.status_pedido = "entregue"
+
+    db.commit()
+    return {"message": "Pedido movido para o Crediário com sucesso!", "pedido_id": pedido.id}
 
 
 @app.patch("/pedidos/{pedido_id}/valor", tags=["Crediário"])

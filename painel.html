@@ -182,6 +182,8 @@
     .btn-danger { background-color: #c0392b; color: white; }
     .btn-edit { background-color: #34495e; color: white; }
     .btn-share { background-color: #d35400; color: white; }
+    .btn-fiado-move { background-color: #8e44ad; color: white; }
+    .btn-abater { background-color: #27ae60; color: white; }
     .btn-whatsapp {
       background-color: #25d366;
       color: #121212;
@@ -264,7 +266,7 @@
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
       <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos</button>
-      <button class="nav-btn" id="tab-crediario-btn" onclick="alternarAba('crediario')">💳 Crediário</button>
+      <button class="nav-btn" id="tab-crediario-btn" onclick="alternarAba('crediario')">💳 Caderno de Crediário</button>
     </div>
 
     <!-- 1. ABA PEDIDOS -->
@@ -330,7 +332,7 @@
     <!-- 3. ABA CREDIÁRIO -->
     <div id="aba-crediario" style="display: none;">
       <div class="card-item" style="border-left-color: #e74c3c;">
-        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento no Crediário</h3>
+        <h3 style="margin-top: 0; color: #e74c3c;">➕ Novo Lançamento de Fiado / Serviço</h3>
 
         <div class="form-row grid-2">
           <div>
@@ -369,11 +371,11 @@
           </div>
         </div>
 
-        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito na Conta</button>
+        <button class="btn-main" id="btn-lancar-cred" onclick="lancarCrediarioManual()">Lançar Débito no Caderno</button>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">💳 Contas em Aberto</h2>
+        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">💳 Contas em Aberto no Crediário</h2>
         <button class="btn-action" style="background:#262626; color:#fff;" onclick="carregarCrediario()">🔄 Atualizar</button>
       </div>
       <div id="lista-crediario">Carregando registros do crediário...</div>
@@ -563,6 +565,7 @@
 
       const isEntregue = String(p.status_pedido).toLowerCase() === "entregue";
       const isCancelado = String(p.status_pedido).toLowerCase() === "cancelado";
+      const isFiado = String(p.status_pagamento).toLowerCase() === "fiado";
       const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na Infinity 027 no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
 
@@ -599,7 +602,8 @@
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <small style="color: #777;">${dataFormatada}</small>
             <div style="display: flex; gap: 6px;">
-              ${!isEntregue && !isCancelado ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar e Abater Estoque</button>` : ''}
+              ${!isFiado && !isCancelado ? `<button class="btn-action btn-fiado-move" onclick="moverPedidoCrediario(${p.id})">💳 Marcar como Fiado</button>` : ''}
+              ${!isEntregue && !isCancelado ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar</button>` : ''}
               ${!isCancelado ? `<button class="btn-action btn-danger" onclick="cancelarPedido(${p.id})">✖ Cancelar</button>` : '<span style="color: #7f8c8d; font-weight: bold;">Cancelado</span>'}
               ${isEntregue ? '<span style="color: #2ecc71; font-weight: bold; margin-left: 4px;">✔ Entregue</span>' : ''}
             </div>
@@ -607,6 +611,27 @@
         </div>
       `;
     }).join("");
+  }
+
+  async function moverPedidoCrediario(pedidoId) {
+    if (!confirm(`Deseja marcar o Pedido #${pedidoId} como FIADO e transferir para o Caderno de Crediário?`)) return;
+
+    try {
+      const resp = await fetch(`${API_URL}/pedidos/${pedidoId}/mover-crediario`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+
+      if (resp.ok) {
+        alert("✔ Pedido transferido para o Crediário!");
+        carregarPedidos();
+        carregarCrediario();
+      } else {
+        alert("Erro ao transferir pedido.");
+      }
+    } catch (e) {
+      alert("Erro de conexão.");
+    }
   }
 
   async function alternarStatusPagamento(pedidoId, statusAtual) {
@@ -761,7 +786,7 @@
           `💈 *INFINITY 027 - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`
         );
 
-        if (confirm("✔ Débito lançado com sucesso!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
+        if (confirm("✔ Débito lançado com sucesso no caderno!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
           window.open(`https://wa.me/55${zapLimpo}?text=${msgZap}`, "_blank");
         }
 
@@ -783,7 +808,7 @@
     } catch (e) {
       alert(`Erro de conexão com o servidor: ${e.message}`);
     } finally {
-      btn.innerText = "Lançar Débito na Conta";
+      btn.innerText = "Lançar Débito no Caderno";
       btn.disabled = false;
     }
   }
@@ -825,7 +850,7 @@
       const c = d.cliente || {};
       const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
 
-      let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus lançamentos em aberto:\n`;
+      let textoExtrato = `💈 *INFINITY 027 - EXTRATO DE CONTA*\nOlá, *${c.nome}*!\n\nSegue o resumo dos seus débitos em aberto:\n`;
       (d.pedidos || []).forEach(p => {
         const itensNomes = (p.itens || []).map(i => `${i.quantidade}x ${i.produto}`).join(', ');
         textoExtrato += `\n• *Lançamento #${p.pedido_id}* (${p.data}): R$ ${p.valor.toFixed(2)}\n  _${itensNomes}_`;
@@ -841,8 +866,8 @@
             <div style="font-size:12px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
           </div>
           <div style="display:flex; gap:6px;">
-            <button class="btn-action btn-edit" title="Editar Valor" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
-            <button class="btn-action btn-green" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
+            <button class="btn-action btn-edit" title="Editar Valor deste lançamento" onclick="editarValorLancamento(${p.pedido_id}, ${p.valor})">✏ R$</button>
+            <button class="btn-action btn-green" title="Quitar apenas este pedido" onclick="quitarPedidoCrediario(${p.pedido_id})">✔ Quitar</button>
           </div>
         </div>
       `).join("");
@@ -856,7 +881,7 @@
             </div>
             <div style="text-align:right;">
               <small style="color:#aaa; display:block; font-size:11px;">Saldo Devedor:</small>
-              <span style="font-size:18px; font-weight:bold; color:#ff4d4d;">R$ ${d.total_divida.toFixed(2)}</span>
+              <span style="font-size:20px; font-weight:bold; color:#ff4d4d;">R$ ${d.total_divida.toFixed(2)}</span>
             </div>
           </div>
 
@@ -870,12 +895,50 @@
             ${pedidosHtml}
           </div>
 
-          <div style="text-align:right; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">
+            <button class="btn-action btn-abater" onclick="abaterPagamentoCliente(${c.id}, '${c.nome}', ${d.total_divida})">💵 Abater Pagamento Parcial</button>
             <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Enviar Extrato via WhatsApp</a>
           </div>
         </div>
       `;
     }).join("");
+  }
+
+  async function abaterPagamentoCliente(clienteId, clienteNome, totalDivida) {
+    const valorStr = prompt(`Cliente: ${clienteNome}\nSaldo Devedor Atual: R$ ${totalDivida.toFixed(2)}\n\nInforme o valor pago pelo cliente para abater:`, "");
+    if (valorStr === null) return;
+
+    const valorPago = parseFloat(valorStr.replace(",", "."));
+    if (isNaN(valorPago) || valorPago <= 0) {
+      alert("Por favor, digite um valor numérico válido.");
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API_URL}/fiados/abater`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify({
+          cliente_id: clienteId,
+          valor_pago: valorPago
+        })
+      });
+
+      if (resp.ok) {
+        const restante = Math.max(0, totalDivida - valorPago);
+        alert(`✔ Abatimento de R$ ${valorPago.toFixed(2)} realizado com sucesso!\nSaldo restante: R$ ${restante.toFixed(2)}`);
+        carregarCrediario();
+        carregarPedidos();
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        alert(`Erro: ${err.detail || 'Falha ao abater valor'}`);
+      }
+    } catch (e) {
+      alert("Erro de conexão ao abater valor.");
+    }
   }
 
   async function editarValorLancamento(pedidoId, valorAtual) {
