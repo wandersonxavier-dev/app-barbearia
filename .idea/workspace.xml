@@ -5,7 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="07fdf131-2a5e-4fb6-8c2f-19f0f8988018" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/atualizar_banco.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/barberboone.py" beforeDir="false" afterPath="$PROJECT_DIR$/barberboone.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

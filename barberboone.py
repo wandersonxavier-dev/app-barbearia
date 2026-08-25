@@ -9,14 +9,16 @@ import models
 import schemas
 import security
 
+# Cria as tabelas que não existirem
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="App Barber API",
-    description="API para gestão de clientes, estoque, pedidos e fiados",
+    description="API para gestão de clientes, estoque, pedidos e crediário",
     version="1.1.0",
 )
 
+# Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -210,7 +212,7 @@ def excluir_produto(
 
 
 # ==========================================
-# 4. PEDIDOS E FLUXO DE FIADO
+# 4. PEDIDOS E CREDIÁRIO
 # ==========================================
 
 
@@ -280,12 +282,12 @@ def listar_pedidos(
     )
 
 
-@app.get("/fiados", tags=["Fiados"])
-def listar_fiados(
+@app.get("/fiados", tags=["Crediário"])
+def listar_crediario(
     db: Session = Depends(get_db),
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
-    pedidos_fiados = (
+    pedidos_crediario = (
         db.query(models.Pedido)
         .filter(
             models.Pedido.status_pagamento == models.StatusPagamento.FIADO,
@@ -294,28 +296,51 @@ def listar_fiados(
         .all()
     )
 
-    clientes_devedores = {}
-    for p in pedidos_fiados:
+    clientes_crediario = {}
+    for p in pedidos_crediario:
         cid = p.cliente_id
-        if cid not in clientes_devedores:
-            clientes_devedores[cid] = {
-                "cliente": schemas.ClienteResponseSchema.model_validate(
-                    p.cliente
-                ).model_dump(),
+        if cid not in clientes_crediario:
+            cli = p.cliente
+            cliente_dados = {
+                "id": cli.id if cli else cid,
+                "nome": cli.nome if cli else f"Cliente #{cid}",
+                "telefone": cli.telefone if cli else "",
+                "cpf": getattr(cli, "cpf", None),
+                "rg": getattr(cli, "rg", None),
+                "data_nascimento": getattr(cli, "data_nascimento", None),
+                "profissao": getattr(cli, "profissao", None),
+                "instagram": getattr(cli, "instagram", None),
+                "endereco": getattr(cli, "endereco", None),
+                "numero": getattr(cli, "numero", None),
+                "bairro": getattr(cli, "bairro", None),
+                "cidade": getattr(cli, "cidade", None),
+                "cep": getattr(cli, "cep", None),
+            }
+            clientes_crediario[cid] = {
+                "cliente": cliente_dados,
                 "total_divida": 0.0,
                 "pedidos": [],
             }
 
         total_pedido = sum(
-            item.quantidade * item.preco_unitario for item in p.itens
+            (item.quantidade or 0) * (item.preco_unitario or 0.0)
+            for item in p.itens
         )
-        clientes_devedores[cid]["total_divida"] += total_pedido
-        clientes_devedores[cid]["pedidos"].append(
+        clientes_crediario[cid]["total_divida"] += total_pedido
+        clientes_crediario[cid]["pedidos"].append(
             {
                 "pedido_id": p.id,
-                "data": p.data_criacao.strftime("%d/%m/%Y %H:%M"),
+                "data": (
+                    p.data_criacao.strftime("%d/%m/%Y %H:%M")
+                    if p.data_criacao
+                    else ""
+                ),
                 "valor": total_pedido,
-                "status_pedido": p.status_pedido.value,
+                "status_pedido": (
+                    p.status_pedido.value
+                    if hasattr(p.status_pedido, "value")
+                    else str(p.status_pedido)
+                ),
                 "itens": [
                     {
                         "produto": (
@@ -331,7 +356,7 @@ def listar_fiados(
             }
         )
 
-    return list(clientes_devedores.values())
+    return list(clientes_crediario.values())
 
 
 @app.patch("/pedidos/{pedido_id}/entregar", tags=["Pedidos"])
