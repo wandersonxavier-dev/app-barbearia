@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.6",
+    version="1.2.7",
 )
 
 
@@ -379,7 +379,7 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
-        # 1. Localiza ou cria o cliente
+        # 1. Localiza ou cria o cliente com base no telefone informado
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
@@ -481,7 +481,6 @@ def listar_pedidos(
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        # Carregamento Eager (Joinedload) para garantir que cliente, itens e produtos venham juntos sem falhar
         pedidos_db = (
             db.query(models.Pedido)
             .options(
@@ -561,17 +560,16 @@ def listar_crediario(
                 joinedload(models.Pedido.cliente),
                 joinedload(models.Pedido.itens).joinedload(models.ItemPedido.produto),
             )
-            .filter(
-                models.Pedido.status_pedido != "cancelado"
-            )
             .order_by(models.Pedido.data_criacao.asc())
             .all()
         )
 
+        # Filtra apenas os pedidos cujo status_pagamento seja fiado e o status_pedido nao seja cancelado
         pedidos_crediario = [
             p
             for p in todos_pedidos
             if "fiado" in str(p.status_pagamento).lower()
+            and str(p.status_pedido).lower() != "cancelado"
         ]
 
         clientes_crediario = {}
@@ -654,14 +652,15 @@ def marcar_como_entregue(
         )
 
     for item in pedido.itens:
-        if item.produto.quantidade_estoque < item.quantidade:
+        if item.produto and item.produto.quantidade_estoque < item.quantidade:
             raise HTTPException(
                 status_code=400,
                 detail=f"Estoque insuficiente para {item.produto.nome}.",
             )
 
     for item in pedido.itens:
-        item.produto.quantidade_estoque -= item.quantidade
+        if item.produto:
+            item.produto.quantidade_estoque -= item.quantidade
 
     pedido.status_pedido = "entregue"
     db.commit()
@@ -689,7 +688,8 @@ def cancelar_pedido(
 
     if str(pedido.status_pedido).lower() == "entregue":
         for item in pedido.itens:
-            item.produto.quantidade_estoque += item.quantidade
+            if item.produto:
+                item.produto.quantidade_estoque += item.quantidade
 
     pedido.status_pedido = "cancelado"
     db.commit()
