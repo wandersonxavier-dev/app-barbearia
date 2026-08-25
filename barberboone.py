@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.3",
+    version="1.2.4",
 )
 
 
@@ -481,21 +481,70 @@ def editar_valor_pedido(
     return {"message": "Valor atualizado com sucesso!", "novo_valor": novo_valor_float}
 
 
-@app.get(
-    "/pedidos",
-    response_model=List[schemas.PedidoResponseSchema],
-    tags=["Pedidos"],
-)
+@app.get("/pedidos", tags=["Pedidos"])
 def listar_pedidos(
     db: Session = Depends(get_db),
     usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        return (
+        pedidos_db = (
             db.query(models.Pedido)
             .order_by(models.Pedido.data_criacao.desc())
             .all()
         )
+
+        resultado = []
+        for p in pedidos_db:
+            cli = p.cliente
+            cliente_dict = {
+                "id": cli.id if cli else p.cliente_id,
+                "nome": cli.nome if cli else f"Cliente #{p.cliente_id}",
+                "telefone": cli.telefone if cli else "",
+                "cpf": getattr(cli, "cpf", None),
+                "rg": getattr(cli, "rg", None),
+                "data_nascimento": getattr(cli, "data_nascimento", None),
+                "genero": getattr(cli, "genero", None),
+                "estado_civil": getattr(cli, "estado_civil", None),
+                "profissao": getattr(cli, "profissao", None),
+                "telefone_residencial": getattr(cli, "telefone_residencial", None),
+                "email": getattr(cli, "email", None),
+                "instagram": getattr(cli, "instagram", None),
+                "endereco": getattr(cli, "endereco", None),
+                "numero": getattr(cli, "numero", None),
+                "bairro": getattr(cli, "bairro", None),
+                "cidade": getattr(cli, "cidade", None),
+                "cep": getattr(cli, "cep", None),
+            } if cli else None
+
+            itens_list = []
+            for item in (p.itens or []):
+                prod = item.produto
+                itens_list.append({
+                    "id": item.id,
+                    "produto_id": item.produto_id,
+                    "quantidade": item.quantidade,
+                    "preco_unitario": item.preco_unitario,
+                    "produto": {
+                        "id": prod.id if prod else item.produto_id,
+                        "nome": prod.nome if prod else f"Produto #{item.produto_id}",
+                        "descricao": prod.descricao if prod else None,
+                        "preco": prod.preco if prod else item.preco_unitario,
+                        "quantidade_estoque": prod.quantidade_estoque if prod else 0,
+                        "imagem_url": prod.imagem_url if prod else None,
+                    } if prod else None
+                })
+
+            resultado.append({
+                "id": p.id,
+                "cliente_id": p.cliente_id,
+                "cliente": cliente_dict,
+                "status_pagamento": str(p.status_pagamento).lower(),
+                "status_pedido": str(p.status_pedido).lower(),
+                "data_criacao": p.data_criacao.isoformat() if p.data_criacao else None,
+                "itens": itens_list,
+            })
+
+        return resultado
     except Exception as e:
         logger.error(f"Erro em listar_pedidos: {e}")
         return []

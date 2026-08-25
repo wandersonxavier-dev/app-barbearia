@@ -230,7 +230,7 @@
 
 <div class="container">
 
-  <!-- CABEÇALHO COM A IDENTIDADE INFINITY 027 -->
+  <!-- CABEÇALHO -->
   <div class="header-logo">
     <img id="app-logo" src="https://i.imgur.com/snD8nkl.png" alt="Logo Infinity 027">
     <h2 class="brand-title">INFINITY 027</h2>
@@ -550,14 +550,14 @@
       const clienteTel = c.telefone || "";
 
       const itensHtml = (p.itens || []).map(item => {
-        const subtotal = item.quantidade * item.preco_unitario;
+        const subtotal = (item.quantidade || 0) * (item.preco_unitario || 0);
         total += subtotal;
         const nomeProd = item.produto ? item.produto.nome : `Produto #${item.produto_id}`;
         return `<div>• <b>${nomeProd}</b> — ${item.quantidade}x (R$ ${item.preco_unitario.toFixed(2)})</div>`;
       }).join("");
 
-      const isEntregue = p.status_pedido === "entregue";
-      const isCancelado = p.status_pedido === "cancelado";
+      const isEntregue = String(p.status_pedido).toLowerCase() === "entregue";
+      const isCancelado = String(p.status_pedido).toLowerCase() === "cancelado";
       const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na Infinity 027 no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
       const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
 
@@ -565,7 +565,9 @@
       if (isEntregue) statusClasse = "entregue";
       if (isCancelado) statusClasse = "cancelado";
 
-      const labelPagamento = p.status_pagamento === "fiado" ? "Crediário" : p.status_pagamento;
+      const statusPagamentoStr = String(p.status_pagamento || 'pendente').toLowerCase();
+      const labelPagamento = statusPagamentoStr === "fiado" ? "Crediário" : statusPagamentoStr;
+      const dataFormatada = p.data_criacao ? new Date(p.data_criacao).toLocaleString('pt-BR') : 'Data recente';
 
       return `
         <div class="card-item ${statusClasse}">
@@ -576,7 +578,7 @@
             </div>
             <div style="display: flex; gap: 6px;">
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
-              <span class="badge badge-${p.status_pagamento}" title="Alterar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${p.status_pagamento}')">${labelPagamento} 🔄</span>
+              <span class="badge badge-${statusPagamentoStr}" title="Alterar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${statusPagamentoStr}')">${labelPagamento} 🔄</span>
             </div>
           </div>
 
@@ -590,7 +592,7 @@
             <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #e74c3c;">Total: R$ ${total.toFixed(2)}</div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <small style="color: #777;">${new Date(p.data_criacao).toLocaleString('pt-BR')}</small>
+            <small style="color: #777;">${dataFormatada}</small>
             <div style="display: flex; gap: 6px;">
               ${!isEntregue && !isCancelado ? `<button class="btn-action btn-green" onclick="entregarPedido(${p.id})">✔ Entregar e Abater Estoque</button>` : ''}
               ${!isCancelado ? `<button class="btn-action btn-danger" onclick="cancelarPedido(${p.id})">✖ Cancelar</button>` : '<span style="color: #7f8c8d; font-weight: bold;">Cancelado</span>'}
