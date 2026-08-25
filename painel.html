@@ -214,7 +214,7 @@
       border: 1px solid #222;
     }
 
-    /* CARDS DE FATURAMENTO / MARCADORES */
+    /* CARDS DE FATURAMENTO */
     .metric-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -658,18 +658,26 @@
       const clienteNome = c.nome || `Cliente #${p.cliente_id}`;
       const clienteTel = c.telefone || "";
 
+      let textoItensZap = "";
+
       const itensHtml = (p.itens || []).map(item => {
         const subtotal = (item.quantidade || 0) * (item.preco_unitario || 0);
         total += subtotal;
         const nomeProd = item.produto ? item.produto.nome : `Produto #${item.produto_id}`;
+
+        // Formata os itens para o texto detalhado do WhatsApp
+        textoItensZap += `\n• *${nomeProd}* (R$ ${item.preco_unitario.toFixed(2)})\n  ↳ ${item.quantidade} unidade${item.quantidade > 1 ? 's' : ''}\n`;
+
         return `<div>• <b>${nomeProd}</b> — ${item.quantidade}x (R$ ${item.preco_unitario.toFixed(2)})</div>`;
       }).join("");
 
       const isEntregue = String(p.status_pedido).toLowerCase() === "entregue";
       const isCancelado = String(p.status_pedido).toLowerCase() === "cancelado";
       const isFiado = String(p.status_pagamento).toLowerCase() === "fiado";
-      const msgZap = encodeURIComponent(`Olá ${clienteNome}, seu pedido #${p.id} na Infinity 027 no valor de R$ ${total.toFixed(2)} está pronto para retirada!`);
-      const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${msgZap}` : "#";
+
+      // Mensagem completa e detalhada para o cliente no WhatsApp
+      const msgCompletaZap = `💈 *INFINITY 027 - PEDIDO PRONTO*\nOlá, *${clienteNome}*!\n\nSeu *Pedido #${p.id}* no valor total de *R$ ${total.toFixed(2)}* está pronto para retirada!\n\n📋 *Itens inclusos:*${textoItensZap}\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`;
+      const linkZap = clienteTel ? `https://wa.me/55${clienteTel.replace(/\D/g, '')}?text=${encodeURIComponent(msgCompletaZap)}` : "#";
 
       let statusClasse = "";
       if (isEntregue) statusClasse = "entregue";
@@ -885,7 +893,7 @@
       if (resp.ok) {
         const zapLimpo = telefone.replace(/\D/g, '');
         const msgZap = encodeURIComponent(
-          `💈 *INFINITY 027 - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${qtd}x ${descricao_item}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`
+          `💈 *INFINITY 027 - LANÇAMENTO NO CREDIÁRIO*\nOlá, *${nome}*!\n\nFoi registrado um lançamento na sua conta:\n• *Item:* ${descricao_item}\n  ↳ ${qtd} unidade${qtd > 1 ? 's' : ''}\n• *Valor deste lançamento:* R$ ${valor.toFixed(2)}\n\nChave PIX: *${CHAVE_PIX_BARBEIRO}*\nQualquer dúvida estamos à disposição!\n_Beauty • Style • Confidence_`
         );
 
         if (confirm("✔ Débito lançado com sucesso no crediário!\n\nDeseja abrir o WhatsApp agora para enviar o comprovante ao cliente?")) {
