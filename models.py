@@ -18,6 +18,7 @@ from database import Base
 class StatusPagamento(str, enum.Enum):
     PAGO = "pago"
     PENDENTE = "pendente"
+    FIADO = "fiado"
 
 
 class StatusPedido(str, enum.Enum):
@@ -41,6 +42,22 @@ class Cliente(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
     telefone = Column(String(20), unique=True, nullable=False)
+
+    # Novos campos da ficha física
+    cpf = Column(String(20), nullable=True)
+    rg = Column(String(20), nullable=True)
+    data_nascimento = Column(String(15), nullable=True)
+    genero = Column(String(20), nullable=True)
+    estado_civil = Column(String(30), nullable=True)
+    profissao = Column(String(100), nullable=True)
+    telefone_residencial = Column(String(20), nullable=True)
+    email = Column(String(100), nullable=True)
+    instagram = Column(String(100), nullable=True)
+    endereco = Column(String(255), nullable=True)
+    numero = Column(String(20), nullable=True)
+    bairro = Column(String(100), nullable=True)
+    cidade = Column(String(100), nullable=True)
+    cep = Column(String(20), nullable=True)
 
     pedidos = relationship("Pedido", back_populates="cliente")
 

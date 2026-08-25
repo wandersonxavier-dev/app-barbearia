@@ -5,7 +5,6 @@ from pydantic import BaseModel, EmailStr
 from models import StatusPagamento, StatusPedido
 
 
-# --- Schemas de Autenticação / Usuário ---
 class UsuarioCriarSchema(BaseModel):
     nome: str
     email: EmailStr
@@ -26,10 +25,24 @@ class TokenSchema(BaseModel):
     token_type: str
 
 
-# --- Schemas de Clientes ---
+# --- Schemas de Clientes com todos os campos da ficha ---
 class ClienteCriarSchema(BaseModel):
     nome: str
     telefone: str
+    cpf: Optional[str] = None
+    rg: Optional[str] = None
+    data_nascimento: Optional[str] = None
+    genero: Optional[str] = None
+    estado_civil: Optional[str] = None
+    profissao: Optional[str] = None
+    telefone_residencial: Optional[str] = None
+    email: Optional[str] = None
+    instagram: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    cep: Optional[str] = None
 
 
 class ClienteResponseSchema(ClienteCriarSchema):

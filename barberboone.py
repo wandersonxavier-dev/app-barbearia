@@ -9,17 +9,14 @@ import models
 import schemas
 import security
 
-# 1. Cria as tabelas se não existirem
 Base.metadata.create_all(bind=engine)
 
-# 2. Inicializa a aplicação
 app = FastAPI(
     title="App Barber API",
-    description="API para gestão de clientes, estoque e pedidos",
-    version="1.0.0",
+    description="API para gestão de clientes, estoque, pedidos e fiados",
+    version="1.1.0",
 )
 
-# 3. Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,7 +26,7 @@ app.add_middleware(
 )
 
 # ==========================================
-# 1. AUTENTICAÇÃO E BARBEIRO
+# 1. AUTENTICAÇÃO
 # ==========================================
 
 
@@ -104,7 +101,9 @@ def cadastrar_ou_obter_cliente(
         .first()
     )
     if cliente_existente:
-        cliente_existente.nome = dados.nome
+        for campo, valor in dados.model_dump(exclude_unset=True).items():
+            if valor is not None:
+                setattr(cliente_existente, campo, valor)
         db.commit()
         db.refresh(cliente_existente)
         return cliente_existente
@@ -211,7 +210,7 @@ def excluir_produto(
 
 
 # ==========================================
-# 4. PEDIDOS E FLUXO DE ENTREGA
+# 4. PEDIDOS E FLUXO DE FIADO
 # ==========================================
 
 
@@ -281,6 +280,60 @@ def listar_pedidos(
     )
 
 
+@app.get("/fiados", tags=["Fiados"])
+def listar_fiados(
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+):
+    pedidos_fiados = (
+        db.query(models.Pedido)
+        .filter(
+            models.Pedido.status_pagamento == models.StatusPagamento.FIADO,
+            models.Pedido.status_pedido != models.StatusPedido.CANCELADO,
+        )
+        .all()
+    )
+
+    clientes_devedores = {}
+    for p in pedidos_fiados:
+        cid = p.cliente_id
+        if cid not in clientes_devedores:
+            clientes_devedores[cid] = {
+                "cliente": schemas.ClienteResponseSchema.model_validate(
+                    p.cliente
+                ).model_dump(),
+                "total_divida": 0.0,
+                "pedidos": [],
+            }
+
+        total_pedido = sum(
+            item.quantidade * item.preco_unitario for item in p.itens
+        )
+        clientes_devedores[cid]["total_divida"] += total_pedido
+        clientes_devedores[cid]["pedidos"].append(
+            {
+                "pedido_id": p.id,
+                "data": p.data_criacao.strftime("%d/%m/%Y %H:%M"),
+                "valor": total_pedido,
+                "status_pedido": p.status_pedido.value,
+                "itens": [
+                    {
+                        "produto": (
+                            item.produto.nome
+                            if item.produto
+                            else f"Produto #{item.produto_id}"
+                        ),
+                        "quantidade": item.quantidade,
+                        "preco_unitario": item.preco_unitario,
+                    }
+                    for item in p.itens
+                ],
+            }
+        )
+
+    return list(clientes_devedores.values())
+
+
 @app.patch("/pedidos/{pedido_id}/entregar", tags=["Pedidos"])
 def marcar_como_entregue(
     pedido_id: int,
@@ -302,7 +355,7 @@ def marcar_como_entregue(
         if item.produto.quantidade_estoque < item.quantidade:
             raise HTTPException(
                 status_code=400,
-                detail=f"Estoque insuficiente para {item.produto.nome}. Disponível: {item.produto.quantidade_estoque}",
+                detail=f"Estoque insuficiente para {item.produto.nome}.",
             )
 
     for item in pedido.itens:
@@ -312,7 +365,7 @@ def marcar_como_entregue(
     db.commit()
 
     return {
-        "message": "Pedido marcado como ENTREGUE e itens reduzidos do estoque com sucesso.",
+        "message": "Pedido entregue com sucesso.",
         "pedido_id": pedido.id,
     }
 
@@ -330,11 +383,8 @@ def cancelar_pedido(
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
     if pedido.status_pedido == models.StatusPedido.CANCELADO:
-        raise HTTPException(
-            status_code=400, detail="Este pedido já está cancelado."
-        )
+        raise HTTPException(status_code=400, detail="Pedido já cancelado.")
 
-    # Se o pedido já havia sido entregue, devolve a quantidade para o estoque
     if pedido.status_pedido == models.StatusPedido.ENTREGUE:
         for item in pedido.itens:
             item.produto.quantidade_estoque += item.quantidade
@@ -342,10 +392,7 @@ def cancelar_pedido(
     pedido.status_pedido = models.StatusPedido.CANCELADO
     db.commit()
 
-    return {
-        "message": "Pedido cancelado com sucesso.",
-        "pedido_id": pedido.id,
-    }
+    return {"message": "Pedido cancelado.", "pedido_id": pedido.id}
 
 
 @app.patch("/pedidos/{pedido_id}/pagamento", tags=["Pedidos"])
@@ -365,7 +412,7 @@ def atualizar_status_pagamento(
     db.commit()
 
     return {
-        "message": f"Status de pagamento atualizado para {dados.status_pagamento.value}.",
+        "message": f"Status atualizado para {dados.status_pagamento.value}.",
         "pedido_id": pedido.id,
         "status_pagamento": pedido.status_pagamento,
     }

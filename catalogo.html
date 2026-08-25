@@ -148,12 +148,12 @@
       padding: 16px;
       box-shadow: 0 -3px 15px rgba(0,0,0,0.6);
       text-align: center;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
       z-index: 100;
     }
     .footer-checkout .container {
-      max-width: 500px;
+      max-width: 600px;
     }
     .btn-submit {
       background-color: #f39c12;
@@ -182,24 +182,31 @@
       cursor: pointer;
       margin-top: 6px;
     }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      text-align: left;
+      margin-bottom: 8px;
+    }
     .form-group {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       text-align: left;
     }
     .form-group label {
-      font-size: 12px;
+      font-size: 11px;
       color: #aaa;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .form-group input, .form-group select {
       width: 100%;
-      padding: 10px;
+      padding: 9px;
       border-radius: 6px;
       background-color: #2a2a2a;
       color: white;
       border: 1px solid #444;
-      font-size: 14px;
+      font-size: 13px;
       box-sizing: border-box;
     }
     .pix-box {
@@ -220,8 +227,19 @@
       margin: 8px 0;
       object-fit: contain;
     }
+    .accordion-header {
+      background: #252525;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #f39c12;
+      cursor: pointer;
+      margin-bottom: 10px;
+      text-align: left;
+      font-weight: bold;
+    }
     .spacer {
-      height: 340px;
+      height: 380px;
     }
   </style>
 </head>
@@ -240,19 +258,111 @@
 
 <div class="footer-checkout">
   <div class="container">
-    <div class="form-group">
-      <label for="cliente-nome">Seu Nome Completo:</label>
-      <input type="text" id="cliente-nome" placeholder="Ex: Carlos Silva">
+    <div style="font-weight: bold; color: #f39c12; margin-bottom: 8px; font-size: 14px; text-align: left;">📋 Ficha de Cadastro</div>
+
+    <!-- Campos Principais Obrigatórios -->
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="cliente-nome">Nome Completo *</label>
+        <input type="text" id="cliente-nome" placeholder="Ex: Carlos Silva">
+      </div>
+      <div class="form-group">
+        <label for="cliente-telefone">Celular / WhatsApp *</label>
+        <input type="tel" id="cliente-telefone" placeholder="Ex: 27999998888">
+      </div>
     </div>
-    <div class="form-group">
-      <label for="cliente-telefone">Seu WhatsApp (com DDD):</label>
-      <input type="tel" id="cliente-telefone" placeholder="Ex: 27999998888">
+
+    <!-- Sanfona para Dados Complementares da Ficha -->
+    <div class="accordion-header" onclick="alternarCamposFicha()">
+      ➕ Completar Ficha de Cadastro (Endereço, CPF, RG...) ▾
     </div>
+
+    <div id="ficha-completa" style="display: none;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>CPF</label>
+          <input type="text" id="cliente-cpf" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group">
+          <label>RG</label>
+          <input type="text" id="cliente-rg" placeholder="Ex: 1234567-ES">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data de Nascimento</label>
+          <input type="date" id="cliente-nasc">
+        </div>
+        <div class="form-group">
+          <label>Gênero</label>
+          <select id="cliente-genero">
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Estado Civil</label>
+          <input type="text" id="cliente-estadocivil" placeholder="Ex: Solteiro(a)">
+        </div>
+        <div class="form-group">
+          <label>Profissão</label>
+          <input type="text" id="cliente-profissao" placeholder="Ex: Engenheiro">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="cliente-email" placeholder="email@cliente.com">
+        </div>
+        <div class="form-group">
+          <label>Instagram / Redes Sociais</label>
+          <input type="text" id="cliente-instagram" placeholder="@seuperfil">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label>Endereço Completo</label>
+          <input type="text" id="cliente-endereco" placeholder="Rua, Avenida...">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Número</label>
+          <input type="text" id="cliente-numero" placeholder="Ex: 120">
+        </div>
+        <div class="form-group">
+          <label>Bairro</label>
+          <input type="text" id="cliente-bairro" placeholder="Ex: Centro">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="cliente-cidade" placeholder="Ex: Vitória">
+        </div>
+        <div class="form-group">
+          <label>CEP</label>
+          <input type="text" id="cliente-cep" placeholder="Ex: 29000-000">
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagamento -->
     <div class="form-group">
       <label for="pagamento">Forma de Pagamento:</label>
       <select id="pagamento" onchange="alternarFormaPagamento()">
         <option value="retirada">Pagar na retirada (Dinheiro / Cartão)</option>
         <option value="pix">Pagar agora via PIX</option>
+        <option value="fiado">Marcar no Fiado (A Prazo)</option>
       </select>
     </div>
 
@@ -270,21 +380,22 @@
 
 <script>
   const API_URL = "https://app-barbearia-api.onrender.com";
-
-  // ==========================================
-  // CONFIGURAÇÕES DO BARBEIRO
-  // ==========================================
   const CHAVE_PIX_BARBEIRO = "27997834019";
   const QR_CODE_PIX_URL = "https://i.imgur.com/fcT4V4s.png";
   const WHATSAPP_BARBEIRO = "5527997834019";
-  // ==========================================
 
   let produtos = [];
   let carrinho = {};
 
+  // Restaura dados salvos localmente
   document.getElementById("cliente-nome").value = localStorage.getItem("cliente_nome") || "";
   document.getElementById("cliente-telefone").value = localStorage.getItem("cliente_tel") || "";
   document.getElementById("pix-key-display").value = CHAVE_PIX_BARBEIRO;
+
+  function alternarCamposFicha() {
+    const box = document.getElementById("ficha-completa");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  }
 
   async function carregarProdutos() {
     try {
@@ -336,7 +447,6 @@
       const prod = produtos.find(p => p.id === prodId);
       if (prod && prod.quantidade_estoque > 0) {
         alterarQtd(prodId, 1, prod.quantidade_estoque);
-
         setTimeout(() => {
           const el = document.getElementById(`card-prod-${prodId}`);
           if (el) {
@@ -397,16 +507,6 @@
     });
   }
 
-  function formatarErroApi(err) {
-    if (!err) return "Erro desconhecido.";
-    if (typeof err.detail === "string") return err.detail;
-    if (Array.isArray(err.detail)) {
-      return err.detail.map(e => `${e.loc ? e.loc.join('.') + ': ' : ''}${e.msg}`).join('\n');
-    }
-    if (typeof err.detail === "object") return JSON.stringify(err.detail);
-    return JSON.stringify(err);
-  }
-
   async function enviarPedido() {
     const nome = document.getElementById("cliente-nome").value.trim();
     const telefone = document.getElementById("cliente-telefone").value.trim();
@@ -414,7 +514,7 @@
     const totalPedido = calcularTotalNumerico();
 
     if (!nome || !telefone) {
-      alert("Preencha Nome e WhatsApp antes de finalizar.");
+      alert("Preencha Nome e Celular/WhatsApp antes de finalizar.");
       return;
     }
 
@@ -438,22 +538,40 @@
       localStorage.setItem("cliente_nome", nome);
       localStorage.setItem("cliente_tel", telefone);
 
+      // Coleta dados completos da ficha
+      const payloadCliente = {
+        nome: nome,
+        telefone: telefone,
+        cpf: document.getElementById("cliente-cpf")?.value.trim() || null,
+        rg: document.getElementById("cliente-rg")?.value.trim() || null,
+        data_nascimento: document.getElementById("cliente-nasc")?.value || null,
+        genero: document.getElementById("cliente-genero")?.value || null,
+        estado_civil: document.getElementById("cliente-estadocivil")?.value.trim() || null,
+        profissao: document.getElementById("cliente-profissao")?.value.trim() || null,
+        email: document.getElementById("cliente-email")?.value.trim() || null,
+        instagram: document.getElementById("cliente-instagram")?.value.trim() || null,
+        endereco: document.getElementById("cliente-endereco")?.value.trim() || null,
+        numero: document.getElementById("cliente-numero")?.value.trim() || null,
+        bairro: document.getElementById("cliente-bairro")?.value.trim() || null,
+        cidade: document.getElementById("cliente-cidade")?.value.trim() || null,
+        cep: document.getElementById("cliente-cep")?.value.trim() || null
+      };
+
       const respCliente = await fetch(`${API_URL}/clientes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome, telefone: telefone })
+        body: JSON.stringify(payloadCliente)
       });
 
-      if (!respCliente.ok) {
-        const errCli = await respCliente.json();
-        throw new Error(`Erro no cadastro do cliente:\n${formatarErroApi(errCli)}`);
-      }
-
+      if (!respCliente.ok) throw new Error("Falha ao registrar cadastro do cliente.");
       const clienteData = await respCliente.json();
+
+      let statusPagamentoBackend = "pendente";
+      if (formaPagamento === "fiado") statusPagamentoBackend = "fiado";
 
       const payloadPedido = {
         cliente_id: clienteData.id,
-        status_pagamento: "pendente",
+        status_pagamento: statusPagamentoBackend,
         itens: itens
       };
 
@@ -467,17 +585,16 @@
         const ped = await respPedido.json();
 
         if (formaPagamento === "pix") {
-          alert(`🎉 Pedido #${ped.id} registrado! Você será redirecionado para o WhatsApp da barbearia para enviar o comprovante do PIX.`);
-          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)} pelo app. Segue o comprovante do pagamento via PIX:`);
+          alert(`🎉 Pedido #${ped.id} registrado! Envie o comprovante pelo WhatsApp.`);
+          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
           window.open(`https://wa.me/${WHATSAPP_BARBEIRO}?text=${msg}`, "_blank");
+        } else if (formaPagamento === "fiado") {
+          alert(`📒 Pedido #${ped.id} registrado no Fiado com sucesso!`);
         } else {
-          alert(`🎉 Pedido #${ped.id} registrado com sucesso! O pagamento será feito na retirada.`);
+          alert(`🎉 Pedido #${ped.id} registrado com sucesso! Pagamento na retirada.`);
         }
 
         window.location.href = "/catalogo.html";
-      } else {
-        const errPed = await respPedido.json();
-        alert(`Erro ao criar pedido:\n${formatarErroApi(errPed)}`);
       }
     } catch (e) {
       alert(e.message || "Erro ao conectar com o servidor.");

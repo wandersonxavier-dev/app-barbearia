@@ -14,7 +14,7 @@
       padding: 16px;
     }
     .container {
-      max-width: 700px;
+      max-width: 750px;
       margin: 0 auto;
     }
     .header-logo {
@@ -72,7 +72,7 @@
     }
     .nav-tabs {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 16px;
     }
     .nav-btn {
@@ -84,6 +84,7 @@
       border-radius: 6px;
       font-weight: bold;
       cursor: pointer;
+      font-size: 13px;
     }
     .nav-btn.active {
       background: #f39c12;
@@ -100,6 +101,9 @@
       border-left-color: #7f8c8d;
       opacity: 0.5;
     }
+    .card-item.fiado-card {
+      border-left-color: #e74c3c;
+    }
     .badge {
       display: inline-block;
       padding: 3px 8px;
@@ -114,6 +118,7 @@
     .badge-cancelado { background: #7f8c8d; color: #fff; }
     .badge-pendente { background: #c0392b; color: #fff; }
     .badge-pago { background: #2980b9; color: #fff; }
+    .badge-fiado { background: #8e44ad; color: #fff; }
     .itens-lista {
       margin: 12px 0;
       background: #252525;
@@ -142,7 +147,6 @@
       font-size: 13px;
       font-weight: bold;
       display: inline-block;
-      margin-top: 6px;
     }
     .prod-thumb {
       width: 50px;
@@ -151,6 +155,15 @@
       object-fit: cover;
       background-color: #333;
       margin-right: 12px;
+    }
+    .ficha-box {
+      background: #191919;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 8px 0;
+      font-size: 12px;
+      color: #bbb;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -190,13 +203,14 @@
   <div id="secao-painel" style="display: none;">
     <div class="nav-tabs">
       <button class="nav-btn active" id="tab-pedidos-btn" onclick="alternarAba('pedidos')">📦 Pedidos</button>
-      <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos & Estoque</button>
+      <button class="nav-btn" id="tab-produtos-btn" onclick="alternarAba('produtos')">✂ Produtos</button>
+      <button class="nav-btn" id="tab-fiados-btn" onclick="alternarAba('fiados')">📒 Fiados</button>
     </div>
 
-    <!-- PEDIDOS -->
+    <!-- 1. PEDIDOS -->
     <div id="aba-pedidos">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 20px;">Pedidos Recebidos</h2>
+        <h2 style="margin: 0; font-size: 18px;">Pedidos Recebidos</h2>
         <div style="display: flex; gap: 8px;">
           <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
           <button class="btn-action btn-danger" onclick="fazerLogout()">Sair</button>
@@ -205,7 +219,7 @@
       <div id="lista-pedidos">Carregando pedidos...</div>
     </div>
 
-    <!-- PRODUTOS -->
+    <!-- 2. PRODUTOS -->
     <div id="aba-produtos" style="display: none;">
       <div class="card-item" style="border-left-color: #3498db;">
         <h3 id="form-produto-titulo" style="margin-top: 0;">➕ Cadastrar Novo Produto</h3>
@@ -215,7 +229,7 @@
         <input type="text" id="produto-nome" placeholder="Ex: Pomada Efeito Seco">
 
         <label style="font-size: 13px;">Descrição do Produto:</label>
-        <textarea id="produto-descricao" rows="2" placeholder="Ex: Serve para modelar o cabelo e manter o penteado firme por mais tempo."></textarea>
+        <textarea id="produto-descricao" rows="2" placeholder="Ex: Fixação forte e efeito fosco."></textarea>
 
         <label style="font-size: 13px;">Preço (R$):</label>
         <input type="number" step="0.01" id="produto-preco" placeholder="Ex: 35.00">
@@ -225,21 +239,14 @@
 
         <label style="font-size: 13px; font-weight: bold; display: block; margin-top: 10px;">Foto do Produto:</label>
 
-        <!-- Inputs de arquivo invisíveis -->
         <input type="file" id="input-camera" accept="image/*" capture="environment" style="display: none;" onchange="processarFotoProduto(event)">
         <input type="file" id="input-galeria" accept="image/*" style="display: none;" onchange="processarFotoProduto(event)">
 
-        <!-- Botões para Câmera e Galeria -->
         <div style="display: flex; gap: 10px; margin: 8px 0 12px 0;">
-          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 10px;" onclick="document.getElementById('input-camera').click()">
-            📷 Tirar Foto
-          </button>
-          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 10px;" onclick="document.getElementById('input-galeria').click()">
-            📁 Galeria
-          </button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #2c3e50; color: white; padding: 10px;" onclick="document.getElementById('input-camera').click()">📷 Câmera</button>
+          <button type="button" class="btn-action" style="flex: 1; background-color: #34495e; color: white; padding: 10px;" onclick="document.getElementById('input-galeria').click()">📁 Galeria</button>
         </div>
 
-        <!-- Prévia da Foto -->
         <div id="box-preview-foto" style="display: none; text-align: center; margin-bottom: 12px;">
           <img id="preview-foto" src="" alt="Prévia da foto" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid #f39c12; display: inline-block;">
           <br>
@@ -254,6 +261,15 @@
 
       <h3 style="font-size: 18px;">Produtos no Catálogo</h3>
       <div id="lista-produtos">Carregando produtos...</div>
+    </div>
+
+    <!-- 3. FIADOS (NOVA ABA) -->
+    <div id="aba-fiados" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin: 0; font-size: 18px;">📒 Controle de Fiados</h2>
+        <button class="btn-action" style="background:#444; color:#fff;" onclick="carregarFiados()">🔄 Atualizar</button>
+      </div>
+      <div id="lista-fiados">Carregando fiados...</div>
     </div>
   </div>
 
@@ -366,19 +382,17 @@
   }
 
   function alternarAba(aba) {
-    if (aba === "pedidos") {
-      document.getElementById("aba-pedidos").style.display = "block";
-      document.getElementById("aba-produtos").style.display = "none";
-      document.getElementById("tab-pedidos-btn").classList.add("active");
-      document.getElementById("tab-produtos-btn").classList.remove("active");
-      carregarPedidos();
-    } else {
-      document.getElementById("aba-pedidos").style.display = "none";
-      document.getElementById("aba-produtos").style.display = "block";
-      document.getElementById("tab-produtos-btn").classList.add("active");
-      document.getElementById("tab-pedidos-btn").classList.remove("active");
-      carregarProdutosPainel();
-    }
+    document.getElementById("aba-pedidos").style.display = aba === "pedidos" ? "block" : "none";
+    document.getElementById("aba-produtos").style.display = aba === "produtos" ? "block" : "none";
+    document.getElementById("aba-fiados").style.display = aba === "fiados" ? "block" : "none";
+
+    document.getElementById("tab-pedidos-btn").classList.toggle("active", aba === "pedidos");
+    document.getElementById("tab-produtos-btn").classList.toggle("active", aba === "produtos");
+    document.getElementById("tab-fiados-btn").classList.toggle("active", aba === "fiados");
+
+    if (aba === "pedidos") carregarPedidos();
+    if (aba === "produtos") carregarProdutosPainel();
+    if (aba === "fiados") carregarFiados();
   }
 
   async function carregarPedidos() {
@@ -409,8 +423,9 @@
 
     container.innerHTML = pedidos.map(p => {
       let total = 0;
-      const clienteNome = p.cliente ? p.cliente.nome : `Cliente #${p.cliente_id}`;
-      const clienteTel = p.cliente ? p.cliente.telefone : "";
+      const c = p.cliente || {};
+      const clienteNome = c.nome || `Cliente #${p.cliente_id}`;
+      const clienteTel = c.telefone || "";
 
       const itensHtml = p.itens.map(item => {
         const subtotal = item.quantidade * item.preco_unitario;
@@ -433,13 +448,20 @@
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <h3 style="margin: 0; font-size: 16px;">Pedido #${p.id} — 👤 ${clienteNome}</h3>
-              ${clienteTel && !isCancelado ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp">💬 WhatsApp</a>` : ''}
+              ${clienteTel && !isCancelado ? `<a href="${linkZap}" target="_blank" class="btn-whatsapp" style="margin-top:6px;">💬 WhatsApp</a>` : ''}
             </div>
             <div style="display: flex; gap: 6px;">
               <span class="badge badge-${p.status_pedido}">${p.status_pedido}</span>
-              <span class="badge badge-${p.status_pagamento}" title="Clique para alternar status de pagamento" onclick="alternarStatusPagamento(${p.id}, '${p.status_pagamento}')">${p.status_pagamento} 🔄</span>
+              <span class="badge badge-${p.status_pagamento}" title="Alterar status" onclick="alternarStatusPagamento(${p.id}, '${p.status_pagamento}')">${p.status_pagamento} 🔄</span>
             </div>
           </div>
+
+          <!-- Resumo da Ficha do Cliente -->
+          <div class="ficha-box">
+            <b>Dados do Cliente:</b> Tel: ${clienteTel || 'N/I'} | CPF: ${c.cpf || 'N/I'} | RG: ${c.rg || 'N/I'} | Nasc: ${c.data_nascimento || 'N/I'}<br>
+            Endereço: ${c.endereco || 'N/I'}, Nº ${c.numero || 'S/N'} - ${c.bairro || 'N/I'}, ${c.cidade || ''} (CEP: ${c.cep || 'N/I'})
+          </div>
+
           <div class="itens-lista">
             ${itensHtml}
             <div style="margin-top: 6px; text-align: right; font-weight: bold; color: #f39c12;">Total: R$ ${total.toFixed(2)}</div>
@@ -458,8 +480,11 @@
   }
 
   async function alternarStatusPagamento(pedidoId, statusAtual) {
-    const novoStatus = statusAtual === "pago" ? "pendente" : "pago";
-    if (!confirm(`Deseja alterar o pagamento do Pedido #${pedidoId} para '${novoStatus.toUpperCase()}'?`)) return;
+    const opcoes = ["pendente", "pago", "fiado"];
+    const proximoIndex = (opcoes.indexOf(statusAtual) + 1) % opcoes.length;
+    const novoStatus = opcoes[proximoIndex];
+
+    if (!confirm(`Alterar pagamento do Pedido #${pedidoId} para '${novoStatus.toUpperCase()}'?`)) return;
 
     try {
       const response = await fetch(`${API_URL}/pedidos/${pedidoId}/pagamento`, {
@@ -473,12 +498,98 @@
 
       if (response.ok) {
         carregarPedidos();
-      } else {
-        const err = await response.json();
-        alert(`Erro: ${err.detail || 'Falha ao atualizar pagamento'}`);
+        if (document.getElementById("aba-fiados").style.display === "block") carregarFiados();
       }
     } catch (e) {
-      alert("Erro ao conectar com a API.");
+      alert("Erro ao atualizar pagamento.");
+    }
+  }
+
+  // --- CONTROLE DE FIADOS ---
+  async function carregarFiados() {
+    try {
+      const response = await fetch(`${API_URL}/fiados`, {
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
+      });
+      const devedores = await response.json();
+      renderizarFiados(devedores);
+    } catch (e) {
+      document.getElementById("lista-fiados").innerHTML = "<p style='color: red;'>Erro ao buscar fiados.</p>";
+    }
+  }
+
+  function renderizarFiados(devedores) {
+    const container = document.getElementById("lista-fiados");
+    if (devedores.length === 0) {
+      container.innerHTML = "<p style='color:#2ecc71; font-weight:bold;'>🎉 Nenhum cliente com fiado pendente no momento!</p>";
+      return;
+    }
+
+    container.innerHTML = devedores.map(d => {
+      const c = d.cliente;
+      const zapLimpo = c.telefone ? c.telefone.replace(/\D/g, '') : '';
+      const msgCobranca = encodeURIComponent(`Olá ${c.nome}, tudo bem? Passando para lembrar sobre seu saldo em aberto de R$ ${d.total_divida.toFixed(2)} na Barber Boone.`);
+      const linkCobranca = `https://wa.me/55${zapLimpo}?text=${msgCobranca}`;
+
+      const pedidosHtml = d.pedidos.map(p => `
+        <div style="border-bottom: 1px solid #333; padding: 6px 0; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <b>Pedido #${p.pedido_id}</b> (${p.data}) - R$ ${p.valor.toFixed(2)}
+            <div style="font-size:11px; color:#888;">${p.itens.map(i => `${i.quantidade}x ${i.produto}`).join(', ')}</div>
+          </div>
+          <button class="btn-action btn-green" onclick="quitarPedidoFiado(${p.pedido_id})">✔ Quitar</button>
+        </div>
+      `).join("");
+
+      return `
+        <div class="card-item fiado-card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <h3 style="margin:0; color:#e74c3c;">👤 ${c.nome}</h3>
+              <small style="color:#aaa;">WhatsApp: ${c.telefone || 'N/A'} | CPF: ${c.cpf || 'N/A'}</small>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:18px; font-weight:bold; color:#e74c3c;">R$ ${d.total_divida.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="ficha-box">
+            <b>Endereço:</b> ${c.endereco || 'N/I'}, ${c.numero || ''} - ${c.bairro || ''}, ${c.cidade || ''}<br>
+            <b>Profissão:</b> ${c.profissao || 'N/I'} | <b>Instagram:</b> ${c.instagram || 'N/I'}
+          </div>
+
+          <div class="itens-lista">
+            <b>Compras Fiado:</b>
+            ${pedidosHtml}
+          </div>
+
+          <div style="text-align:right; margin-top:8px;">
+            <a href="${linkCobranca}" target="_blank" class="btn-whatsapp">📲 Cobrar via WhatsApp</a>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function quitarPedidoFiado(pedidoId) {
+    if (!confirm(`Confirmar o recebimento e quitar o Pedido #${pedidoId}?`)) return;
+
+    try {
+      const response = await fetch(`${API_URL}/pedidos/${pedidoId}/pagamento`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenJWT}`
+        },
+        body: JSON.stringify({ status_pagamento: "pago" })
+      });
+
+      if (response.ok) {
+        alert("Pedido marcado como PAGO com sucesso!");
+        carregarFiados();
+      }
+    } catch (e) {
+      alert("Erro ao quitar pedido.");
     }
   }
 
@@ -494,9 +605,6 @@
       if (response.ok) {
         carregarPedidos();
         carregarProdutosPainel();
-      } else {
-        const err = await response.json();
-        alert(`Erro: ${err.detail || 'Falha ao atualizar'}`);
       }
     } catch (e) {
       alert("Erro ao conectar com a API.");
@@ -504,7 +612,7 @@
   }
 
   async function cancelarPedido(pedidoId) {
-    if (!confirm(`Deseja realmente cancelar o Pedido #${pedidoId}? Se ele já tiver sido entregue, o estoque será devolvido automaticamente.`)) return;
+    if (!confirm(`Deseja realmente cancelar o Pedido #${pedidoId}? Se ele já tiver sido entregue, o estoque será devolvido.`)) return;
 
     try {
       const response = await fetch(`${API_URL}/pedidos/${pedidoId}/cancelar`, {
@@ -515,9 +623,6 @@
       if (response.ok) {
         carregarPedidos();
         carregarProdutosPainel();
-      } else {
-        const err = await response.json();
-        alert(`Erro: ${err.detail || 'Falha ao cancelar pedido'}`);
       }
     } catch (e) {
       alert("Erro ao conectar com a API.");
@@ -566,17 +671,13 @@
 
   function compartilharProduto(id, nome, preco) {
     const link = `${CATALOGO_BASE_URL}?produto=${id}`;
-    const texto = `Confira nosso produto *${nome}* por apenas *R$ ${preco.toFixed(2)}* na Barber Boone! Peça pelo link direto: ${link}`;
+    const texto = `Confira nosso produto *${nome}* por apenas *R$ ${preco.toFixed(2)}* na Barber Boone! Peça pelo link: ${link}`;
 
     if (navigator.share) {
-      navigator.share({
-        title: nome,
-        text: texto,
-        url: link
-      }).catch(() => {});
+      navigator.share({ title: nome, text: texto, url: link }).catch(() => {});
     } else {
       navigator.clipboard.writeText(link).then(() => {
-        alert(`Link copiado para a área de transferência!\n\n${link}`);
+        alert(`Link copiado!\n\n${link}`);
       });
     }
   }
@@ -670,9 +771,6 @@
         alert(id ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
         resetarFormularioProduto();
         carregarProdutosPainel();
-      } else {
-        const err = await response.json();
-        alert(`Erro: ${err.detail || 'Não foi possível salvar o produto'}`);
       }
     } catch (e) {
       alert("Erro de conexão ao salvar produto.");
@@ -683,27 +781,20 @@
   }
 
   async function excluirProduto(id, nome) {
-    if (!confirm(`Tem certeza que deseja excluir o produto "${nome}"? Esta ação removerá o item do catálogo dos clientes.`)) {
-      return;
-    }
+    if (!confirm(`Tem certeza que deseja excluir o produto "${nome}"?`)) return;
 
     try {
       const response = await fetch(`${API_URL}/produtos/${id}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${tokenJWT}`
-        }
+        headers: { "Authorization": `Bearer ${tokenJWT}` }
       });
 
       if (response.ok) {
-        alert("Produto excluído com sucesso!");
+        alert("Produto excluído!");
         carregarProdutosPainel();
-      } else {
-        const err = await response.json();
-        alert(`Erro ao excluir: ${err.detail || 'Não foi possível remover o produto'}`);
       }
     } catch (e) {
-      alert("Erro de conexão ao excluir produto.");
+      alert("Erro ao excluir produto.");
     }
   }
 
