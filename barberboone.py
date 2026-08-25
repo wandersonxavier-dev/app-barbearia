@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import inspect, text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
 import models
@@ -91,7 +91,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.2.7",
+    version="1.2.9",
 )
 
 
@@ -483,10 +483,6 @@ def listar_pedidos(
     try:
         pedidos_db = (
             db.query(models.Pedido)
-            .options(
-                joinedload(models.Pedido.cliente),
-                joinedload(models.Pedido.itens).joinedload(models.ItemPedido.produto),
-            )
             .order_by(models.Pedido.data_criacao.desc())
             .all()
         )
@@ -556,15 +552,10 @@ def listar_crediario(
     try:
         todos_pedidos = (
             db.query(models.Pedido)
-            .options(
-                joinedload(models.Pedido.cliente),
-                joinedload(models.Pedido.itens).joinedload(models.ItemPedido.produto),
-            )
             .order_by(models.Pedido.data_criacao.asc())
             .all()
         )
 
-        # Filtra apenas os pedidos cujo status_pagamento seja fiado e o status_pedido nao seja cancelado
         pedidos_crediario = [
             p
             for p in todos_pedidos

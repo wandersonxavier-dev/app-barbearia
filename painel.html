@@ -491,6 +491,7 @@
     document.getElementById("secao-painel").style.display = "block";
     carregarPedidos();
     carregarProdutosPainel();
+    carregarCrediario();
   }
 
   function alternarAba(aba) {
@@ -506,7 +507,11 @@
     if (aba === "produtos") carregarProdutosPainel();
     if (aba === "crediario") {
       carregarCrediario();
-      carregarProdutosNoSelectCrediario();
+      if (produtosLocais.length === 0) {
+        carregarProdutosPainel();
+      } else {
+        carregarProdutosNoSelectCrediario();
+      }
     }
   }
 
@@ -624,7 +629,7 @@
 
       if (response.ok) {
         carregarPedidos();
-        if (document.getElementById("aba-crediario").style.display === "block") carregarCrediario();
+        carregarCrediario();
       }
     } catch (e) {
       alert("Erro ao atualizar pagamento.");
@@ -768,7 +773,9 @@
         document.getElementById("cred-qtd").value = "1";
         document.getElementById("box-item-personalizado").style.display = "none";
         document.getElementById("cred-aviso-cliente").style.display = "none";
-        carregarCrediario();
+
+        await carregarCrediario();
+        await carregarPedidos();
       } else {
         const err = await resp.json().catch(() => ({}));
         alert(`Erro (${resp.status}): ${err.detail || 'Falha ao lançar débito'}`);
@@ -791,6 +798,12 @@
       if (response.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
         fazerLogout();
+        return;
+      }
+
+      if (!response.ok) {
+        const erroJson = await response.json().catch(() => ({}));
+        container.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar crediário.'}</p>`;
         return;
       }
 

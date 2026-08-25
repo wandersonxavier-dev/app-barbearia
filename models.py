@@ -7,7 +7,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    Enum as SQLEnum,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -57,7 +56,7 @@ class Cliente(Base):
     cidade = Column(String(100), nullable=True)
     cep = Column(String(20), nullable=True)
 
-    pedidos = relationship("Pedido", back_populates="cliente")
+    pedidos = relationship("Pedido", back_populates="cliente", lazy="selectin")
 
 
 class Produto(Base):
@@ -70,7 +69,7 @@ class Produto(Base):
     quantidade_estoque = Column(Integer, nullable=False, default=0)
     imagem_url = Column(Text, nullable=True)
 
-    itens_pedido = relationship("ItemPedido", back_populates="produto")
+    itens_pedido = relationship("ItemPedido", back_populates="produto", lazy="selectin")
 
 
 class Pedido(Base):
@@ -78,33 +77,15 @@ class Pedido(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
-    status_pagamento = Column(
-        SQLEnum(
-            StatusPagamento,
-            name="statuspagamento",
-            values_callable=lambda obj: [e.value for e in obj],
-            native_enum=False,
-        ),
-        default=StatusPagamento.PENDENTE,
-        nullable=False,
-    )
-    status_pedido = Column(
-        SQLEnum(
-            StatusPedido,
-            name="statuspedido",
-            values_callable=lambda obj: [e.value for e in obj],
-            native_enum=False,
-        ),
-        default=StatusPedido.SOLICITADO,
-        nullable=False,
-    )
+    status_pagamento = Column(String(50), default="pendente", nullable=False)
+    status_pedido = Column(String(50), default="solicitado", nullable=False)
     data_criacao = Column(
         DateTime(timezone=True), server_default=func.now()
     )
 
-    cliente = relationship("Cliente", back_populates="pedidos")
+    cliente = relationship("Cliente", back_populates="pedidos", lazy="joined")
     itens = relationship(
-        "ItemPedido", back_populates="pedido", cascade="all, delete-orphan"
+        "ItemPedido", back_populates="pedido", cascade="all, delete-orphan", lazy="selectin"
     )
 
 
@@ -118,4 +99,4 @@ class ItemPedido(Base):
     preco_unitario = Column(Float, nullable=False)
 
     pedido = relationship("Pedido", back_populates="itens")
-    produto = relationship("Produto", back_populates="itens_pedido")
+    produto = relationship("Produto", back_populates="itens_pedido", lazy="joined")
