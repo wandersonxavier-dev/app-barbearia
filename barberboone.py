@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.9",
+    version="1.5.0",
 )
 
 
@@ -196,13 +196,11 @@ def cadastrar_ou_obter_cliente(
     try:
         barbearia_id = dados.barbearia_id if dados.barbearia_id else 1
 
-        # Identifica automaticamente a barbearia pelo slug enviado no schema
         if dados.slug_loja:
             barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == dados.slug_loja).first()
             if barbearia_obj:
                 barbearia_id = barbearia_obj.id
 
-        # Procura o cliente pelo telefone E exclusivamente pela barbearia correta
         cliente_existente = (
             db.query(models.Cliente)
             .filter(
@@ -213,8 +211,8 @@ def cadastrar_ou_obter_cliente(
         )
 
         dados_dict = dados.model_dump(exclude_unset=True)
-        dados_dict.pop("slug_loja", None)  # Remove o campo temporário antes de salvar no banco
-        dados_dict["barbearia_id"] = barbearia_id  # Garante o ID exato da loja
+        dados_dict.pop("slug_loja", None)
+        dados_dict["barbearia_id"] = barbearia_id
 
         if cliente_existente:
             for campo, valor in dados_dict.items():
@@ -674,15 +672,18 @@ def listar_pedidos(
 ):
     try:
         barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
+        barbearia_id = barbearia.id if barbearia else 1
 
-        query = db.query(models.Pedido)
-        if barbearia:
-            query = query.filter(models.Pedido.barbearia_id == barbearia.id)
-
+        query = db.query(models.Pedido).filter(models.Pedido.barbearia_id == barbearia_id)
         pedidos_db = query.order_by(models.Pedido.data_criacao.desc()).all()
 
         resultado = []
-        for p in pedidos_db:
+        total_pedidos_loja = len(pedidos_db)
+
+        for index, p in enumerate(pedidos_db):
+            # Calcula o número sequencial limpo da loja (ex: 1, 2, 3...)
+            numero_loja_calc = total_pedidos_loja - index
+
             cli = p.cliente
             cliente_dict = {
                 "id": cli.id if cli else p.cliente_id,
@@ -724,6 +725,7 @@ def listar_pedidos(
 
             resultado.append({
                 "id": p.id,
+                "numero_loja": numero_loja_calc,  # <-- Injetado com sucesso!
                 "cliente_id": p.cliente_id,
                 "barbearia_id": getattr(p, "barbearia_id", 1),
                 "cliente": cliente_dict,
