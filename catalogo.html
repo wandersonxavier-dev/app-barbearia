@@ -420,7 +420,7 @@
   async function carregarProdutos() {
     try {
       // Tenta buscar pela nova rota dinâmica baseada no slug da URL
-      const response = await fetch(`${API_URL}/api/catalogo/${slugLoja}`);
+      const response = await fetch(`${API_URL}/produtos/catalogo/${slugLoja}`);
 
       if (response.ok) {
         const data = await response.json();
