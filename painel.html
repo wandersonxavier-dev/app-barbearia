@@ -214,6 +214,35 @@
       border: 1px solid #222;
     }
 
+    /* SEÇÕES RETRÁTEIS DE PEDIDOS */
+    .section-box {
+      background: #141414;
+      border: 1px solid #242424;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: #1a1a1a;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-weight: bold;
+      font-size: 15px;
+      color: #e74c3c;
+      border-bottom: 1px solid #242424;
+    }
+    .section-content {
+      padding: 12px;
+      display: none;
+    }
+    .section-content.ativo {
+      display: block;
+    }
+
     /* CARDS DE FATURAMENTO */
     .metric-grid {
       display: grid;
@@ -330,13 +359,45 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">Pedidos Recebidos</h2>
+        <h2 style="margin: 0; font-size: 18px; color: #e74c3c;">Gerenciamento de Pedidos</h2>
         <div style="display: flex; gap: 8px;">
           <button class="btn-action" style="background:#262626; color:#fff;" onclick="carregarPedidos()">🔄 Atualizar</button>
           <button class="btn-action btn-danger" onclick="fazerLogout()">Sair</button>
         </div>
       </div>
-      <div id="lista-pedidos">Carregando pedidos...</div>
+
+      <!-- SEÇÃO 1: PENDENTES / NOVOS -->
+      <div class="section-box">
+        <div class="section-header" onclick="alternarSecao('sec-pendentes')">
+          <span>🔴 Pendentes / Novos (<span id="count-pendentes">0</span>)</span>
+          <span id="icon-sec-pendentes">[- Recolher]</span>
+        </div>
+        <div class="section-content ativo" id="sec-pendentes">
+          <div id="lista-pendentes">Nenhum pedido pendente.</div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 2: PAGOS -->
+      <div class="section-box">
+        <div class="section-header" onclick="alternarSecao('sec-pagos')">
+          <span>🟢 Pagos à Vista (<span id="count-pagos">0</span>)</span>
+          <span id="icon-sec-pagos">[+ Expandir]</span>
+        </div>
+        <div class="section-content" id="sec-pagos">
+          <div id="lista-pagos">Nenhum pedido pago registrado.</div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 3: CREDIÁRIO -->
+      <div class="section-box">
+        <div class="section-header" onclick="alternarSecao('sec-crediario')">
+          <span>🟣 Movidos para Crediário (<span id="count-crediario">0</span>)</span>
+          <span id="icon-sec-crediario">[+ Expandir]</span>
+        </div>
+        <div class="section-content" id="sec-crediario">
+          <div id="lista-crediario-pedidos">Nenhum pedido no crediário.</div>
+        </div>
+      </div>
     </div>
 
     <!-- 2. ABA PRODUTOS -->
@@ -601,8 +662,21 @@
     icon.innerText = aberto ? "[+ Expandir]" : "[- Recolher]";
   }
 
+  function alternarSecao(secaoId) {
+    const content = document.getElementById(secaoId);
+    const icon = document.getElementById(`icon-${secaoId}`);
+    const aberto = content.classList.contains("ativo");
+    if (aberto) {
+      content.classList.remove("ativo");
+      icon.innerText = "[+ Expandir]";
+    } else {
+      content.classList.add("ativo");
+      icon.innerText = "[- Recolher]";
+    }
+  }
+
   async function carregarPedidos() {
-    const container = document.getElementById("lista-pedidos");
+    const containerPendentes = document.getElementById("lista-pendentes");
     try {
       const response = await fetch(`${API_URL}/pedidos`, {
         headers: { "Authorization": `Bearer ${tokenJWT}` }
@@ -616,15 +690,15 @@
 
       if (!response.ok) {
         const erroJson = await response.json().catch(() => ({}));
-        container.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar pedidos.'}</p>`;
+        containerPendentes.innerHTML = `<p style='color: red;'>Erro ${response.status}: ${erroJson.detail || 'Falha ao buscar pedidos.'}</p>`;
         return;
       }
 
       const pedidos = await response.json();
       atualizarMarcadorFaturamentoPedidos(pedidos);
-      renderizarPedidos(pedidos);
+      separarEnderizarSecoesPedidos(pedidos);
     } catch (e) {
-      container.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
+      containerPendentes.innerHTML = `<p style='color: red;'>Erro de conexão: ${e.message}</p>`;
     }
   }
 
@@ -648,14 +722,42 @@
     if (elem) elem.innerText = `R$ ${totalPagoAVista.toFixed(2)}`;
   }
 
-  function renderizarPedidos(pedidos) {
-    const container = document.getElementById("lista-pedidos");
-    if (!Array.isArray(pedidos) || pedidos.length === 0) {
-      container.innerHTML = "<p>Nenhum pedido recebido até o momento.</p>";
-      return;
+  function separarEnderizarSecoesPedidos(pedidos) {
+    const listaPendentes = [];
+    const listaPagos = [];
+    const listaCrediario = [];
+
+    if (Array.isArray(pedidos)) {
+      pedidos.forEach(p => {
+        const statusPag = String(p.status_pagamento || '').toLowerCase();
+        const statusPed = String(p.status_pedido || '').toLowerCase();
+
+        if (statusPag === "fiado") {
+          listaCrediario.push(p);
+        } else if (statusPag === "pago") {
+          listaPagos.push(p);
+        } else {
+          // Pendentes / Novos ou Entregues aguardando pagamento
+          listaPendentes.push(p);
+        }
+      });
     }
 
-    container.innerHTML = pedidos.map(p => {
+    document.getElementById("count-pendentes").innerText = listaPendentes.length;
+    document.getElementById("count-pagos").innerText = listaPagos.length;
+    document.getElementById("count-crediario").innerText = listaCrediario.length;
+
+    document.getElementById("lista-pendentes").innerHTML = renderizarCardsListaPedidos(listaPendentes, "Nenhum pedido pendente no momento.");
+    document.getElementById("lista-pagos").innerHTML = renderizarCardsListaPedidos(listaPagos, "Nenhum pedido pago registrado.");
+    document.getElementById("lista-crediario-pedidos").innerHTML = renderizarCardsListaPedidos(listaCrediario, "Nenhum pedido no crediário.");
+  }
+
+  function renderizarCardsListaPedidos(pedidosArray, msgVazio) {
+    if (pedidosArray.length === 0) {
+      return `<p style="color: #777; margin: 8px 0;">${msgVazio}</p>`;
+    }
+
+    return pedidosArray.map(p => {
       let total = 0;
       const c = p.cliente || {};
       const clienteNome = c.nome || `Cliente #${p.cliente_id}`;
@@ -683,6 +785,7 @@
       let statusClasse = "";
       if (isEntregue) statusClasse = "entregue";
       if (isCancelado) statusClasse = "cancelado";
+      if (isFiado) statusClasse = "crediario-card";
 
       const statusPagamentoStr = String(p.status_pagamento || 'pendente').toLowerCase();
       const labelPagamento = statusPagamentoStr === "fiado" ? "Crediário" : statusPagamentoStr;
@@ -1089,7 +1192,6 @@
         return;
       }
 
-      // Se o usuário digitou um valor menor que o atual ou maior querendo somar, confirma com ele
       if (confirm(`Deseja SOMAR R$ ${valorDigitado.toFixed(2)} ao valor atual de R$ ${valorAtual.toFixed(2)}?\n\n(Clique em 'OK' para Somar totalizando R$ ${(valorAtual + valorDigitado).toFixed(2)} ou 'Cancelar' para Definir exatamente R$ ${valorDigitado.toFixed(2)})`)) {
         novoValorCalculado = valorAtual + valorDigitado;
       } else {
