@@ -49,6 +49,20 @@ def executar_migracoes_seguras():
                     logger.warning(f"Aviso conversao status_pedido: {ex_s}")
 
             inspector = inspect(engine)
+
+            # Adicionar barbearia_id nas tabelas se não existirem
+            tabelas_com_barbearia = ["clientes", "produtos", "pedidos"]
+            for tab in tabelas_com_barbearia:
+                if tab in inspector.get_table_names():
+                    cols_tab = [c["name"] for c in inspector.get_columns(tab)]
+                    if "barbearia_id" not in cols_tab:
+                        try:
+                            conn.execute(text(f"ALTER TABLE {tab} ADD COLUMN barbearia_id INTEGER DEFAULT 1;"))
+                            conn.commit()
+                            logger.info(f"Coluna barbearia_id adicionada na tabela {tab}.")
+                        except Exception as ex_b:
+                            logger.warning(f"Erro ao adicionar barbearia_id em {tab}: {ex_b}")
+
             colunas_existentes = [
                 col["name"] for col in inspector.get_columns("clientes")
             ]
@@ -90,8 +104,8 @@ executar_migracoes_seguras()
 
 app = FastAPI(
     title="Infinity 027 API",
-    description="API para gestão de clientes, estoque, pedidos e crediário da Infinity 027",
-    version="1.3.2",
+    description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
+    version="1.4.0",
 )
 
 
@@ -108,6 +122,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ==========================================
 # 1. AUTENTICAÇÃO
 # ==========================================
@@ -120,12 +135,12 @@ app.add_middleware(
     tags=["Autenticação"],
 )
 def cadastrar_barbeiro(
-    dados: schemas.UsuarioCriarSchema, db: Session = Depends(get_db)
+        dados: schemas.UsuarioCriarSchema, db: Session = Depends(get_db)
 ):
     if (
-        db.query(models.Usuario)
-        .filter(models.Usuario.email == dados.email)
-        .first()
+            db.query(models.Usuario)
+                    .filter(models.Usuario.email == dados.email)
+                    .first()
     ):
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
 
@@ -144,8 +159,8 @@ def cadastrar_barbeiro(
     "/auth/login", response_model=schemas.TokenSchema, tags=["Autenticação"]
 )
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
+        form_data: OAuth2PasswordRequestForm = Depends(),
+        db: Session = Depends(get_db),
 ):
     usuario = (
         db.query(models.Usuario)
@@ -153,7 +168,7 @@ def login(
         .first()
     )
     if not usuario or not security.verificar_senha(
-        form_data.password, usuario.senha_hash
+            form_data.password, usuario.senha_hash
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -176,7 +191,7 @@ def login(
     tags=["Clientes"],
 )
 def cadastrar_ou_obter_cliente(
-    dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
+        dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
     cliente_existente = (
         db.query(models.Cliente)
@@ -204,9 +219,9 @@ def cadastrar_ou_obter_cliente(
     tags=["Clientes"],
 )
 def buscar_cliente_por_telefone(
-    telefone: str,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        telefone: str,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     cliente = (
         db.query(models.Cliente)
@@ -224,8 +239,8 @@ def buscar_cliente_por_telefone(
     tags=["Clientes"],
 )
 def listar_clientes(
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     return db.query(models.Cliente).all()
 
@@ -240,10 +255,30 @@ def listar_clientes(
     response_model=List[schemas.ProdutoResponseSchema],
     tags=["Produtos"],
 )
-def listar_catalogo_publico(db: Session = Depends(get_db)):
+def listar_catalogo_publico_geral(db: Session = Depends(get_db)):
     return (
         db.query(models.Produto)
         .filter(models.Produto.quantidade_estoque > 0)
+        .all()
+    )
+
+
+@app.get(
+    "/produtos/catalogo/{slug}",
+    response_model=List[schemas.ProdutoResponseSchema],
+    tags=["Produtos"],
+)
+def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
+    barbearia = db.query(models.Barbearia).filter(models.Barbearia.slug == slug).first()
+    if not barbearia:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+
+    return (
+        db.query(models.Produto)
+        .filter(
+            models.Produto.barbearia_id == barbearia.id,
+            models.Produto.quantidade_estoque > 0
+        )
         .all()
     )
 
@@ -255,11 +290,19 @@ def listar_catalogo_publico(db: Session = Depends(get_db)):
     tags=["Produtos"],
 )
 def cadastrar_produto(
-    dados: schemas.ProdutoCriarSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        dados: schemas.ProdutoCriarSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
-    novo_produto = models.Produto(**dados.model_dump())
+    # Tenta associar à primeira barbearia do usuário logado se houver
+    barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
+    barbearia_id = barbearia.id if barbearia else 1
+
+    dados_dict = dados.model_dump()
+    if "barbearia_id" not in dados_dict or not dados_dict["barbearia_id"]:
+        dados_dict["barbearia_id"] = barbearia_id
+
+    novo_produto = models.Produto(**dados_dict)
     db.add(novo_produto)
     db.commit()
     db.refresh(novo_produto)
@@ -272,10 +315,10 @@ def cadastrar_produto(
     tags=["Produtos"],
 )
 def atualizar_produto(
-    produto_id: int,
-    dados: schemas.ProdutoCriarSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        produto_id: int,
+        dados: schemas.ProdutoCriarSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     produto = (
         db.query(models.Produto)
@@ -295,9 +338,9 @@ def atualizar_produto(
 
 @app.delete("/produtos/{produto_id}", tags=["Produtos"])
 def excluir_produto(
-    produto_id: int,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        produto_id: int,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     produto = (
         db.query(models.Produto)
@@ -319,7 +362,7 @@ def excluir_produto(
 
 @app.post("/pedidos/publico", tags=["Pedidos"])
 def criar_pedido_web(
-    dados: schemas.PedidoCriarPublicoSchema, db: Session = Depends(get_db)
+        dados: schemas.PedidoCriarPublicoSchema, db: Session = Depends(get_db)
 ):
     cliente = (
         db.query(models.Cliente)
@@ -335,7 +378,11 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
+    # Pega o barbearia_id do cliente ou assume 1
+    barbearia_id = getattr(cliente, "barbearia_id", 1)
+
     pedido = models.Pedido(
+        barbearia_id=barbearia_id,
         cliente_id=dados.cliente_id,
         status_pagamento=status_pag,
         status_pedido="solicitado",
@@ -369,9 +416,9 @@ def criar_pedido_web(
 
 @app.post("/pedidos/manual", tags=["Crediário"])
 def lancamento_manual_crediario(
-    dados: schemas.LancamentoManualSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        dados: schemas.LancamentoManualSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         try:
@@ -379,13 +426,16 @@ def lancamento_manual_crediario(
         except ValueError:
             raise HTTPException(status_code=400, detail="Valor numérico inválido.")
 
+        barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
+        barbearia_id = barbearia.id if barbearia else 1
+
         cliente = (
             db.query(models.Cliente)
             .filter(models.Cliente.telefone == dados.telefone)
             .first()
         )
         if not cliente:
-            cliente = models.Cliente(nome=dados.nome, telefone=dados.telefone)
+            cliente = models.Cliente(nome=dados.nome, telefone=dados.telefone, barbearia_id=barbearia_id)
             db.add(cliente)
             db.flush()
         elif dados.nome and cliente.nome != dados.nome:
@@ -393,11 +443,12 @@ def lancamento_manual_crediario(
 
         produto = (
             db.query(models.Produto)
-            .filter(models.Produto.nome == dados.descricao_item)
+            .filter(models.Produto.nome == dados.descricao_item, models.Produto.barbearia_id == barbearia_id)
             .first()
         )
         if not produto:
             produto = models.Produto(
+                barbearia_id=barbearia_id,
                 nome=dados.descricao_item,
                 descricao="Lançamento manual no crediário",
                 preco=valor_float,
@@ -407,6 +458,7 @@ def lancamento_manual_crediario(
             db.flush()
 
         pedido = models.Pedido(
+            barbearia_id=barbearia_id,
             cliente_id=cliente.id,
             status_pagamento="fiado",
             status_pedido="entregue",
@@ -444,9 +496,9 @@ def lancamento_manual_crediario(
 
 @app.post("/fiados/abater", tags=["Crediário"])
 def abater_pagamento_crediario(
-    dados: schemas.AbatimentoCrediarioSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        dados: schemas.AbatimentoCrediarioSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
         try:
@@ -513,9 +565,9 @@ def abater_pagamento_crediario(
 
 @app.patch("/pedidos/{pedido_id}/mover-crediario", tags=["Crediário"])
 def mover_pedido_para_crediario(
-    pedido_id: int,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        pedido_id: int,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
     if not pedido:
@@ -534,10 +586,10 @@ def mover_pedido_para_crediario(
 
 @app.patch("/pedidos/{pedido_id}/valor", tags=["Crediário"])
 def editar_valor_pedido(
-    pedido_id: int,
-    dados: schemas.EditarValorPedidoSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        pedido_id: int,
+        dados: schemas.EditarValorPedidoSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -566,15 +618,18 @@ def editar_valor_pedido(
 
 @app.get("/pedidos", tags=["Pedidos"])
 def listar_pedidos(
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        pedidos_db = (
-            db.query(models.Pedido)
-            .order_by(models.Pedido.data_criacao.desc())
-            .all()
-        )
+        # Busca barbearia do usuário logado para filtrar
+        barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
+
+        query = db.query(models.Pedido)
+        if barbearia:
+            query = query.filter(models.Pedido.barbearia_id == barbearia.id)
+
+        pedidos_db = query.order_by(models.Pedido.data_criacao.desc()).all()
 
         resultado = []
         for p in pedidos_db:
@@ -620,6 +675,7 @@ def listar_pedidos(
             resultado.append({
                 "id": p.id,
                 "cliente_id": p.cliente_id,
+                "barbearia_id": getattr(p, "barbearia_id", 1),
                 "cliente": cliente_dict,
                 "status_pagamento": str(p.status_pagamento).lower(),
                 "status_pedido": str(p.status_pedido).lower(),
@@ -635,21 +691,22 @@ def listar_pedidos(
 
 @app.get("/fiados", tags=["Crediário"])
 def listar_crediario(
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        todos_pedidos = (
-            db.query(models.Pedido)
-            .order_by(models.Pedido.data_criacao.asc())
-            .all()
-        )
+        barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
+        query = db.query(models.Pedido)
+        if barbearia:
+            query = query.filter(models.Pedido.barbearia_id == barbearia.id)
+
+        todos_pedidos = query.order_by(models.Pedido.data_criacao.asc()).all()
 
         pedidos_crediario = [
             p
             for p in todos_pedidos
             if "fiado" in str(p.status_pagamento).lower()
-            and str(p.status_pedido).lower() != "cancelado"
+               and str(p.status_pedido).lower() != "cancelado"
         ]
 
         total_a_receber = 0.0
@@ -725,9 +782,9 @@ def listar_crediario(
 
 @app.patch("/pedidos/{pedido_id}/entregar", tags=["Pedidos"])
 def marcar_como_entregue(
-    pedido_id: int,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        pedido_id: int,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -762,9 +819,9 @@ def marcar_como_entregue(
 
 @app.patch("/pedidos/{pedido_id}/cancelar", tags=["Pedidos"])
 def cancelar_pedido(
-    pedido_id: int,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        pedido_id: int,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
@@ -788,10 +845,10 @@ def cancelar_pedido(
 
 @app.patch("/pedidos/{pedido_id}/pagamento", tags=["Pedidos"])
 def atualizar_status_pagamento(
-    pedido_id: int,
-    dados: schemas.AtualizarPagamentoSchema,
-    db: Session = Depends(get_db),
-    usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
+        pedido_id: int,
+        dados: schemas.AtualizarPagamentoSchema,
+        db: Session = Depends(get_db),
+        usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     pedido = (
         db.query(models.Pedido).filter(models.Pedido.id == pedido_id).first()
