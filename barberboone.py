@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.7",
+    version="1.4.8",
 )
 
 
@@ -193,16 +193,15 @@ def login(
 def cadastrar_ou_obter_cliente(
         dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    barbearia_id = getattr(dados, "barbearia_id", 1)
+    barbearia_id = dados.barbearia_id if dados.barbearia_id else 1
 
-    # Identifica automaticamente a barbearia pelo slug enviado na requisição
-    slug_loja = getattr(dados, "slug_loja", None)
-    if slug_loja:
-        barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == slug_loja).first()
+    # Identifica automaticamente a barbearia pelo slug enviado no schema
+    if dados.slug_loja:
+        barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == dados.slug_loja).first()
         if barbearia_obj:
             barbearia_id = barbearia_obj.id
 
-    # Procura o cliente pelo telefone E exclusivamente pela barbearia atual
+    # Procura o cliente pelo telefone E exclusivamente pela barbearia correta
     cliente_existente = (
         db.query(models.Cliente)
         .filter(
@@ -213,8 +212,8 @@ def cadastrar_ou_obter_cliente(
     )
 
     dados_dict = dados.model_dump(exclude_unset=True)
-    dados_dict.pop("slug_loja", None)  # Remove o campo temporário para não quebrar o modelo do banco
-    dados_dict["barbearia_id"] = barbearia_id
+    dados_dict.pop("slug_loja", None)  # Remove o campo temporário antes de salvar no banco
+    dados_dict["barbearia_id"] = barbearia_id  # Garante o ID exato da loja
 
     if cliente_existente:
         for campo, valor in dados_dict.items():
@@ -415,8 +414,8 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
-    # BLINDAGEM TOTAL: Força o uso do barbearia_id enviado do front-end do catálogo, senão pega do cliente
-    barbearia_id = getattr(dados, "barbearia_id", None) or getattr(cliente, "barbearia_id", 1)
+    # Pega o barbearia_id do payload ou herda diretamente do cliente recém-criado/encontrado
+    barbearia_id = dados.barbearia_id if dados.barbearia_id else getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
         barbearia_id=barbearia_id,

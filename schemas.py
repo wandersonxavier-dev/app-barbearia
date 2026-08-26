@@ -30,6 +30,8 @@ class TokenSchema(BaseModel):
 class ClienteCriarSchema(BaseModel):
     nome: str
     telefone: str
+    barbearia_id: Optional[int] = None
+    slug_loja: Optional[str] = None
     cpf: Optional[str] = None
     rg: Optional[str] = None
     data_nascimento: Optional[str] = None
@@ -88,6 +90,7 @@ class ItemPedidoResponseSchema(BaseModel):
 
 class PedidoCriarPublicoSchema(BaseModel):
     cliente_id: int
+    barbearia_id: Optional[int] = None
     status_pagamento: Union[StatusPagamento, str] = "pendente"
     itens: List[ItemPedidoCriarSchema]
 
