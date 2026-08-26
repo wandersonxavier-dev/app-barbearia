@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.6",
+    version="1.4.7",
 )
 
 
@@ -415,6 +415,7 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
+    # BLINDAGEM TOTAL: Força o uso do barbearia_id enviado do front-end do catálogo, senão pega do cliente
     barbearia_id = getattr(dados, "barbearia_id", None) or getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
