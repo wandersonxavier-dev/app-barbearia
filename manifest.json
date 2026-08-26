@@ -1,10 +1,12 @@
 {
-  "name": "Infinity 027 - Beauty • Style • Confidence",
+  "name": "Infinity 027",
   "short_name": "Infinity027",
   "start_url": "/painel.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0d0d0d",
   "theme_color": "#e74c3c",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "https://i.imgur.com/snD8nkl.png",
