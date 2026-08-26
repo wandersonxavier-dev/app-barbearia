@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.0",
+    version="1.4.1",
 )
 
 
@@ -265,7 +265,6 @@ def listar_catalogo_publico_geral(db: Session = Depends(get_db)):
 
 @app.get(
     "/produtos/catalogo/{slug}",
-    response_model=List[schemas.ProdutoResponseSchema],
     tags=["Produtos"],
 )
 def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
@@ -273,7 +272,7 @@ def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
     if not barbearia:
         raise HTTPException(status_code=404, detail="Barbearia não encontrada")
 
-    return (
+    produtos_db = (
         db.query(models.Produto)
         .filter(
             models.Produto.barbearia_id == barbearia.id,
@@ -281,6 +280,12 @@ def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
         )
         .all()
     )
+
+    return {
+        "barbearia_id": barbearia.id,
+        "barbearia_nome": barbearia.nome,
+        "produtos": produtos_db
+    }
 
 
 @app.post(
@@ -294,7 +299,6 @@ def cadastrar_produto(
         db: Session = Depends(get_db),
         usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
-    # Tenta associar à primeira barbearia do usuário logado se houver
     barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
     barbearia_id = barbearia.id if barbearia else 1
 
@@ -378,7 +382,6 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
-    # Pega o barbearia_id do cliente ou assume 1
     barbearia_id = getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
@@ -622,7 +625,6 @@ def listar_pedidos(
         usuario_atual: models.Usuario = Depends(security.obter_usuario_logado),
 ):
     try:
-        # Busca barbearia do usuário logado para filtrar
         barbearia = db.query(models.Barbearia).filter(models.Barbearia.usuario_id == usuario_atual.id).first()
 
         query = db.query(models.Pedido)
