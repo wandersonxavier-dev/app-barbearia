@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.5",
+    version="1.4.6",
 )
 
 
@@ -193,14 +193,28 @@ def login(
 def cadastrar_ou_obter_cliente(
         dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    # Procura se o cliente já existe pelo telefone E pela mesma barbearia
-    query = db.query(models.Cliente).filter(models.Cliente.telefone == dados.telefone)
-    if hasattr(dados, "barbearia_id") and dados.barbearia_id:
-        query = query.filter(models.Cliente.barbearia_id == dados.barbearia_id)
+    barbearia_id = getattr(dados, "barbearia_id", 1)
 
-    cliente_existente = query.first()
+    # Identifica automaticamente a barbearia pelo slug enviado na requisição
+    slug_loja = getattr(dados, "slug_loja", None)
+    if slug_loja:
+        barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == slug_loja).first()
+        if barbearia_obj:
+            barbearia_id = barbearia_obj.id
+
+    # Procura o cliente pelo telefone E exclusivamente pela barbearia atual
+    cliente_existente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.telefone == dados.telefone,
+            models.Cliente.barbearia_id == barbearia_id
+        )
+        .first()
+    )
 
     dados_dict = dados.model_dump(exclude_unset=True)
+    dados_dict.pop("slug_loja", None)  # Remove o campo temporário para não quebrar o modelo do banco
+    dados_dict["barbearia_id"] = barbearia_id
 
     if cliente_existente:
         for campo, valor in dados_dict.items():
@@ -401,7 +415,6 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
-    # Garante que pega o barbearia_id enviado no payload ou do cliente
     barbearia_id = getattr(dados, "barbearia_id", None) or getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
