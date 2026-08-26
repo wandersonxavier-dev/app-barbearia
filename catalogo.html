@@ -419,7 +419,6 @@
 
   async function carregarProdutos() {
     try {
-      // Tenta buscar pela nova rota dinâmica baseada no slug da URL
       const response = await fetch(`${API_URL}/produtos/catalogo/${slugLoja}`);
 
       if (response.ok) {
@@ -440,7 +439,7 @@
         const responseOld = await fetch(`${API_URL}/produtos/catalogo`);
         if (!responseOld.ok) throw new Error("Erro ao carregar catálogo.");
         produtos = await responseOld.json();
-        barbeariaIdAtual = 1; // Força o ID padrão da Infinity 027
+        barbeariaIdAtual = 1;
         renderizarProdutos();
         verificarParametroProdutoUrl();
       } catch (err2) {
@@ -622,11 +621,11 @@
         const ped = await respPedido.json();
 
         if (formaPagamento === "pix") {
-          alert(`🎉 Pedido #${ped.id} registrado! Envie o comprovante pelo WhatsApp.`);
-          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
+          alert(`🎉 Pedido #${ped.numero_loja} registrado! Envie o comprovante pelo WhatsApp.`);
+          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.numero_loja} no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
           window.open(`https://wa.me/${WHATSAPP_BARBEIRO}?text=${msg}`, "_blank");
         } else {
-          alert(`🎉 Pedido #${ped.id} registrado com sucesso! Pagamento na retirada.`);
+          alert(`🎉 Pedido #${ped.numero_loja} registrado com sucesso! Pagamento na retirada.`);
         }
 
         window.location.href = window.location.pathname + window.location.search;

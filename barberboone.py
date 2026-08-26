@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.3",
+    version="1.4.5",
 )
 
 
@@ -193,20 +193,24 @@ def login(
 def cadastrar_ou_obter_cliente(
         dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    cliente_existente = (
-        db.query(models.Cliente)
-        .filter(models.Cliente.telefone == dados.telefone)
-        .first()
-    )
+    # Procura se o cliente já existe pelo telefone E pela mesma barbearia
+    query = db.query(models.Cliente).filter(models.Cliente.telefone == dados.telefone)
+    if hasattr(dados, "barbearia_id") and dados.barbearia_id:
+        query = query.filter(models.Cliente.barbearia_id == dados.barbearia_id)
+
+    cliente_existente = query.first()
+
+    dados_dict = dados.model_dump(exclude_unset=True)
+
     if cliente_existente:
-        for campo, valor in dados.model_dump(exclude_unset=True).items():
+        for campo, valor in dados_dict.items():
             if valor is not None:
                 setattr(cliente_existente, campo, valor)
         db.commit()
         db.refresh(cliente_existente)
         return cliente_existente
 
-    novo_cliente = models.Cliente(**dados.model_dump())
+    novo_cliente = models.Cliente(**dados_dict)
     db.add(novo_cliente)
     db.commit()
     db.refresh(novo_cliente)
@@ -300,21 +304,7 @@ def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Erro crítico no catalogo por slug {slug}: {e}", exc_info=True)
-        produtos_geral = db.query(models.Produto).filter(models.Produto.quantidade_estoque > 0).all()
-        return {
-            "barbearia_id": 1,
-            "barbearia_nome": "Infinity 027",
-            "produtos": [
-                {
-                    "id": p.id,
-                    "nome": p.nome,
-                    "descricao": p.descricao,
-                    "preco": p.preco,
-                    "quantidade_estoque": p.quantidade_estoque,
-                    "imagem_url": getattr(p, "imagem_url", None)
-                } for p in produtos_geral
-            ]
-        }
+        return {"barbearia_id": 1, "barbearia_nome": "Infinity 027", "produtos": []}
 
 
 @app.post(
@@ -411,7 +401,8 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
-    barbearia_id = getattr(cliente, "barbearia_id", 1)
+    # Garante que pega o barbearia_id enviado no payload ou do cliente
+    barbearia_id = getattr(dados, "barbearia_id", None) or getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
         barbearia_id=barbearia_id,
@@ -443,7 +434,14 @@ def criar_pedido_web(
         db.add(item_banco)
 
     db.commit()
-    return {"message": "Pedido registrado com sucesso!", "id": pedido.id}
+
+    numero_pedido_loja = db.query(models.Pedido).filter(models.Pedido.barbearia_id == barbearia_id).count()
+
+    return {
+        "message": "Pedido registrado com sucesso!",
+        "id": pedido.id,
+        "numero_loja": numero_pedido_loja
+    }
 
 
 @app.post("/pedidos/manual", tags=["Crediário"])
