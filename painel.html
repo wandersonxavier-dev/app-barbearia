@@ -401,6 +401,17 @@
           <div id="lista-crediario-pedidos">Nenhum pedido no crediário.</div>
         </div>
       </div>
+
+      <!-- SEÇÃO 4: CANCELADOS -->
+      <div class="section-box">
+        <div class="section-header" onclick="alternarSecao('sec-cancelados')">
+          <span>❌ Pedidos Cancelados (<span id="count-cancelados">0</span>)</span>
+          <span id="icon-sec-cancelados">[+ Expandir]</span>
+        </div>
+        <div class="section-content" id="sec-cancelados">
+          <div id="lista-cancelados">Nenhum pedido cancelado.</div>
+        </div>
+      </div>
     </div>
 
     <!-- 2. ABA PRODUTOS -->
@@ -729,13 +740,16 @@
     const listaPendentes = [];
     const listaPagos = [];
     const listaCrediario = [];
+    const listaCancelados = [];
 
     if (Array.isArray(pedidos)) {
       pedidos.forEach(p => {
         const statusPag = String(p.status_pagamento || '').toLowerCase();
         const statusPed = String(p.status_pedido || '').toLowerCase();
 
-        if (statusPag === "fiado") {
+        if (statusPed === "cancelado") {
+          listaCancelados.push(p);
+        } else if (statusPag === "fiado") {
           listaCrediario.push(p);
         } else if (statusPag === "pago") {
           listaPagos.push(p);
@@ -748,10 +762,12 @@
     document.getElementById("count-pendentes").innerText = listaPendentes.length;
     document.getElementById("count-pagos").innerText = listaPagos.length;
     document.getElementById("count-crediario").innerText = listaCrediario.length;
+    document.getElementById("count-cancelados").innerText = listaCancelados.length;
 
     document.getElementById("lista-pendentes").innerHTML = renderizarCardsListaPedidos(listaPendentes, "Nenhum pedido pendente no momento.");
     document.getElementById("lista-pagos").innerHTML = renderizarCardsListaPedidos(listaPagos, "Nenhum pedido pago registrado.");
     document.getElementById("lista-crediario-pedidos").innerHTML = renderizarCardsListaPedidos(listaCrediario, "Nenhum pedido no crediário.");
+    document.getElementById("lista-cancelados").innerHTML = renderizarCardsListaPedidos(listaCancelados, "Nenhum pedido cancelado.");
   }
 
   function renderizarCardsListaPedidos(pedidosArray, msgVazio) {
