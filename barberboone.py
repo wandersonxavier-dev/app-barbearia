@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.1",
+    version="1.4.2",
 )
 
 
@@ -268,24 +268,28 @@ def listar_catalogo_publico_geral(db: Session = Depends(get_db)):
     tags=["Produtos"],
 )
 def listar_catalogo_por_slug(slug: str, db: Session = Depends(get_db)):
-    barbearia = db.query(models.Barbearia).filter(models.Barbearia.slug == slug).first()
-    if not barbearia:
-        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    try:
+        barbearia = db.query(models.Barbearia).filter(models.Barbearia.slug == slug).first()
+        if not barbearia:
+            raise HTTPException(status_code=404, detail="Barbearia não encontrada")
 
-    produtos_db = (
-        db.query(models.Produto)
-        .filter(
-            models.Produto.barbearia_id == barbearia.id,
-            models.Produto.quantidade_estoque > 0
+        produtos_db = (
+            db.query(models.Produto)
+            .filter(
+                models.Produto.barbearia_id == barbearia.id,
+                models.Produto.quantidade_estoque > 0
+            )
+            .all()
         )
-        .all()
-    )
 
-    return {
-        "barbearia_id": barbearia.id,
-        "barbearia_nome": barbearia.nome,
-        "produtos": produtos_db
-    }
+        return {
+            "barbearia_id": barbearia.id,
+            "barbearia_nome": barbearia.nome,
+            "produtos": produtos_db
+        }
+    except Exception as e:
+        logger.error(f"Erro no catalogo por slug {slug}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno ao carregar catálogo: {str(e)}")
 
 
 @app.post(
