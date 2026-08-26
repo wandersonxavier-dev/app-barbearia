@@ -396,7 +396,7 @@
 </div>
 
 <script>
-  const API_URL = "https://app-barbearia-api.onrender.com"; // ou seu link atual de API
+  const API_URL = "https://app-barbearia-api.onrender.com";
   const CHAVE_PIX_BARBEIRO = "3df243a9-d179-4d68-9baa-bab44773abfa";
   const QR_CODE_PIX_URL = "https://i.imgur.com/fcT4V4s.png";
   const WHATSAPP_BARBEIRO = "5527997834019";
@@ -405,7 +405,6 @@
   let carrinho = {};
   let barbeariaIdAtual = 1; // Padrão
 
-  // Captura o slug da URL (ex: ?loja=infinity-027) ou assume o padrão
   const urlParams = new URLSearchParams(window.location.search);
   const slugLoja = urlParams.get('loja') || 'infinity-027';
 
@@ -420,22 +419,33 @@
 
   async function carregarProdutos() {
     try {
-      // Faz a requisição para a nova rota baseada no slug da loja
+      // Tenta buscar pela nova rota dinâmica baseada no slug da URL
       const response = await fetch(`${API_URL}/api/catalogo/${slugLoja}`);
-      if (!response.ok) throw new Error("Loja não encontrada.");
 
-      const data = await response.json();
-      barbeariaIdAtual = data.barbearia_id;
-      produtos = data.produtos;
-
-      // Atualiza o nome da barbearia no topo dinamicamente
-      document.getElementById("brand-title-text").innerText = data.barbearia_nome;
-      document.getElementById("page-title").innerText = `${data.barbearia_nome} - Catálogo Exclusivo`;
+      if (response.ok) {
+        const data = await response.json();
+        barbeariaIdAtual = data.barbearia_id;
+        produtos = data.produtos;
+        document.getElementById("brand-title-text").innerText = data.barbearia_nome;
+        document.getElementById("page-title").innerText = `${data.barbearia_nome} - Catálogo Exclusivo`;
+      } else {
+        throw new Error("Rota nova indisponível, usando rota padrão.");
+      }
 
       renderizarProdutos();
       verificarParametroProdutoUrl();
     } catch (error) {
-      document.getElementById("produtos-lista").innerHTML = "<p style='color: red; text-align: center;'>Erro ao carregar catálogo desta barbearia.</p>";
+      console.warn("Usando catálogo padrão global por segurança.");
+      try {
+        const responseOld = await fetch(`${API_URL}/produtos/catalogo`);
+        if (!responseOld.ok) throw new Error("Erro ao carregar catálogo.");
+        produtos = await responseOld.json();
+        barbeariaIdAtual = 1; // Força o ID padrão da Infinity 027
+        renderizarProdutos();
+        verificarParametroProdutoUrl();
+      } catch (err2) {
+        document.getElementById("produtos-lista").innerHTML = "<p style='color: red; text-align: center;'>Erro ao carregar catálogo.</p>";
+      }
     }
   }
 
@@ -570,7 +580,7 @@
       const payloadCliente = {
         nome: nome,
         telefone: telefone,
-        barbearia_id: barbeariaIdAtual, // Vincula o cliente à loja correta
+        barbearia_id: barbeariaIdAtual,
         cpf: document.getElementById("cliente-cpf")?.value.trim() || null,
         rg: document.getElementById("cliente-rg")?.value.trim() || null,
         data_nascimento: document.getElementById("cliente-nasc")?.value || null,
@@ -597,7 +607,7 @@
 
       const payloadPedido = {
         cliente_id: clienteData.id,
-        barbearia_id: barbeariaIdAtual, // Vincula o pedido à loja correta
+        barbearia_id: barbeariaIdAtual,
         status_pagamento: "pendente",
         itens: itens
       };
