@@ -21,7 +21,7 @@ except Exception as e:
     logger.error(f"Erro ao criar tabelas: {e}")
 
 
-# 2. Migração segura
+# 2. Migração segura (evita timeouts e ajusta colunas incrementalmente)
 def executar_migracoes_seguras():
     try:
         with engine.connect() as conn:
@@ -495,7 +495,6 @@ def abater_pagamento_crediario(
                 saldo_para_abater = 0.0
                 break
 
-        # Registra o histórico real do pagamento realizado
         reg_pagamento = models.PagamentoCrediario(
             cliente_id=dados.cliente_id,
             valor_pago=valor_pago
@@ -711,7 +710,6 @@ def listar_crediario(
                 }
             )
 
-        # Soma todos os pagamentos já registrados na tabela de pagamentos de crediário
         todos_pagamentos = db.query(models.PagamentoCrediario).all()
         total_ja_recebido = sum(pag.valor_pago for pag in todos_pagamentos)
 
@@ -810,7 +808,6 @@ def atualizar_status_pagamento(
     status_anterior = str(pedido.status_pagamento).lower()
     pedido.status_pagamento = status_pag
 
-    # Se estava no crediário e foi quitado diretamente pelo botão Quitar
     if status_anterior == "fiado" and status_pag == "pago":
         total_pago = sum((it.quantidade or 0) * (it.preco_unitario or 0.0) for it in pedido.itens)
         reg_pagamento = models.PagamentoCrediario(

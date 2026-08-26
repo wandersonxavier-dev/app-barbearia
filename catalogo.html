@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Infinity 027 - Catálogo Exclusivo</title>
+  <title id="page-title">Catálogo Exclusivo</title>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -265,8 +265,8 @@
 
 <div class="container">
   <div class="header-logo">
-    <img src="https://i.imgur.com/snD8nkl.png" alt="Logo Infinity 027">
-    <h1 class="brand-title">INFINITY 027</h1>
+    <img src="https://i.imgur.com/snD8nkl.png" alt="Logo Barbearia">
+    <h1 class="brand-title" id="brand-title-text">INFINITY 027</h1>
     <p class="brand-slogan">BEAUTY • STYLE • CONFIDENCE</p>
   </div>
 
@@ -396,13 +396,18 @@
 </div>
 
 <script>
-  const API_URL = "https://app-barbearia-api.onrender.com";
+  const API_URL = "https://app-barbearia-api.onrender.com"; // ou seu link atual de API
   const CHAVE_PIX_BARBEIRO = "3df243a9-d179-4d68-9baa-bab44773abfa";
   const QR_CODE_PIX_URL = "https://i.imgur.com/fcT4V4s.png";
   const WHATSAPP_BARBEIRO = "5527997834019";
 
   let produtos = [];
   let carrinho = {};
+  let barbeariaIdAtual = 1; // Padrão
+
+  // Captura o slug da URL (ex: ?loja=infinity-027) ou assume o padrão
+  const urlParams = new URLSearchParams(window.location.search);
+  const slugLoja = urlParams.get('loja') || 'infinity-027';
 
   document.getElementById("cliente-nome").value = localStorage.getItem("cliente_nome") || "";
   document.getElementById("cliente-telefone").value = localStorage.getItem("cliente_tel") || "";
@@ -415,12 +420,22 @@
 
   async function carregarProdutos() {
     try {
-      const response = await fetch(`${API_URL}/produtos/catalogo`);
-      produtos = await response.json();
+      // Faz a requisição para a nova rota baseada no slug da loja
+      const response = await fetch(`${API_URL}/api/catalogo/${slugLoja}`);
+      if (!response.ok) throw new Error("Loja não encontrada.");
+
+      const data = await response.json();
+      barbeariaIdAtual = data.barbearia_id;
+      produtos = data.produtos;
+
+      // Atualiza o nome da barbearia no topo dinamicamente
+      document.getElementById("brand-title-text").innerText = data.barbearia_nome;
+      document.getElementById("page-title").innerText = `${data.barbearia_nome} - Catálogo Exclusivo`;
+
       renderizarProdutos();
-      verificarParametroUrl();
+      verificarParametroProdutoUrl();
     } catch (error) {
-      document.getElementById("produtos-lista").innerHTML = "<p style='color: red;'>Erro ao carregar catálogo.</p>";
+      document.getElementById("produtos-lista").innerHTML = "<p style='color: red; text-align: center;'>Erro ao carregar catálogo desta barbearia.</p>";
     }
   }
 
@@ -455,10 +470,8 @@
     }).join("");
   }
 
-  function verificarParametroUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
+  function verificarParametroProdutoUrl() {
     const prodId = parseInt(urlParams.get('produto'));
-
     if (prodId) {
       const prod = produtos.find(p => p.id === prodId);
       if (prod && prod.quantidade_estoque > 0) {
@@ -557,6 +570,7 @@
       const payloadCliente = {
         nome: nome,
         telefone: telefone,
+        barbearia_id: barbeariaIdAtual, // Vincula o cliente à loja correta
         cpf: document.getElementById("cliente-cpf")?.value.trim() || null,
         rg: document.getElementById("cliente-rg")?.value.trim() || null,
         data_nascimento: document.getElementById("cliente-nasc")?.value || null,
@@ -583,6 +597,7 @@
 
       const payloadPedido = {
         cliente_id: clienteData.id,
+        barbearia_id: barbeariaIdAtual, // Vincula o pedido à loja correta
         status_pagamento: "pendente",
         itens: itens
       };
@@ -597,14 +612,14 @@
         const ped = await respPedido.json();
 
         if (formaPagamento === "pix") {
-          alert(`🎉 Pedido #${ped.id} registrado na Infinity 027! Envie o comprovante pelo WhatsApp.`);
-          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} na Infinity 027 no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
+          alert(`🎉 Pedido #${ped.id} registrado! Envie o comprovante pelo WhatsApp.`);
+          const msg = encodeURIComponent(`Olá! Fiz o Pedido #${ped.id} no valor de R$ ${totalPedido.toFixed(2)}. Segue o comprovante do PIX:`);
           window.open(`https://wa.me/${WHATSAPP_BARBEIRO}?text=${msg}`, "_blank");
         } else {
           alert(`🎉 Pedido #${ped.id} registrado com sucesso! Pagamento na retirada.`);
         }
 
-        window.location.href = "/catalogo.html";
+        window.location.href = window.location.pathname + window.location.search;
       }
     } catch (e) {
       alert(e.message || "Erro ao conectar com o servidor.");
