@@ -105,7 +105,7 @@ executar_migracoes_seguras()
 app = FastAPI(
     title="Infinity 027 API",
     description="API para gestão de clientes, estoque, pedidos e crediário multi-barbearia",
-    version="1.4.8",
+    version="1.4.9",
 )
 
 
@@ -193,41 +193,50 @@ def login(
 def cadastrar_ou_obter_cliente(
         dados: schemas.ClienteCriarSchema, db: Session = Depends(get_db)
 ):
-    barbearia_id = dados.barbearia_id if dados.barbearia_id else 1
+    try:
+        barbearia_id = dados.barbearia_id if dados.barbearia_id else 1
 
-    # Identifica automaticamente a barbearia pelo slug enviado no schema
-    if dados.slug_loja:
-        barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == dados.slug_loja).first()
-        if barbearia_obj:
-            barbearia_id = barbearia_obj.id
+        # Identifica automaticamente a barbearia pelo slug enviado no schema
+        if dados.slug_loja:
+            barbearia_obj = db.query(models.Barbearia).filter(models.Barbearia.slug == dados.slug_loja).first()
+            if barbearia_obj:
+                barbearia_id = barbearia_obj.id
 
-    # Procura o cliente pelo telefone E exclusivamente pela barbearia correta
-    cliente_existente = (
-        db.query(models.Cliente)
-        .filter(
-            models.Cliente.telefone == dados.telefone,
-            models.Cliente.barbearia_id == barbearia_id
+        # Procura o cliente pelo telefone E exclusivamente pela barbearia correta
+        cliente_existente = (
+            db.query(models.Cliente)
+            .filter(
+                models.Cliente.telefone == dados.telefone,
+                models.Cliente.barbearia_id == barbearia_id
+            )
+            .first()
         )
-        .first()
-    )
 
-    dados_dict = dados.model_dump(exclude_unset=True)
-    dados_dict.pop("slug_loja", None)  # Remove o campo temporário antes de salvar no banco
-    dados_dict["barbearia_id"] = barbearia_id  # Garante o ID exato da loja
+        dados_dict = dados.model_dump(exclude_unset=True)
+        dados_dict.pop("slug_loja", None)  # Remove o campo temporário antes de salvar no banco
+        dados_dict["barbearia_id"] = barbearia_id  # Garante o ID exato da loja
 
-    if cliente_existente:
-        for campo, valor in dados_dict.items():
-            if valor is not None:
-                setattr(cliente_existente, campo, valor)
+        if cliente_existente:
+            for campo, valor in dados_dict.items():
+                if valor is not None:
+                    setattr(cliente_existente, campo, valor)
+            db.commit()
+            db.refresh(cliente_existente)
+            return cliente_existente
+
+        novo_cliente = models.Cliente(**dados_dict)
+        db.add(novo_cliente)
         db.commit()
-        db.refresh(cliente_existente)
-        return cliente_existente
+        db.refresh(novo_cliente)
+        return novo_cliente
 
-    novo_cliente = models.Cliente(**dados_dict)
-    db.add(novo_cliente)
-    db.commit()
-    db.refresh(novo_cliente)
-    return novo_cliente
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro crítico em cadastrar_ou_obter_cliente: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao processar cadastro do cliente: {str(e)}"
+        )
 
 
 @app.get(
@@ -414,7 +423,6 @@ def criar_pedido_web(
         else str(dados.status_pagamento)
     ).lower()
 
-    # Pega o barbearia_id do payload ou herda diretamente do cliente recém-criado/encontrado
     barbearia_id = dados.barbearia_id if dados.barbearia_id else getattr(cliente, "barbearia_id", 1)
 
     pedido = models.Pedido(
