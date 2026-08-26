@@ -26,6 +26,21 @@ class StatusPagamento(str, Enum):
     FIADO = "fiado"
 
 
+class Barbearia(Base):
+    __tablename__ = "barbearias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    slug = Column(String(100), unique=True, nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+
+    usuario = relationship("Usuario", backref="barbearias", lazy="joined")
+    produtos = relationship("Produto", back_populates="barbearia", lazy="selectin")
+    clientes = relationship("Cliente", back_populates="barbearia", lazy="selectin")
+    pedidos = relationship("Pedido", back_populates="barbearia", lazy="selectin")
+
+
 class Usuario(Base):
     __tablename__ = "usuarios"
 
@@ -39,8 +54,9 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
+    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=False, default=1)
     nome = Column(String(100), nullable=False)
-    telefone = Column(String(20), unique=True, index=True, nullable=False)
+    telefone = Column(String(20), index=True, nullable=False)
     cpf = Column(String(20), nullable=True)
     rg = Column(String(20), nullable=True)
     data_nascimento = Column(String(15), nullable=True)
@@ -56,6 +72,7 @@ class Cliente(Base):
     cidade = Column(String(100), nullable=True)
     cep = Column(String(20), nullable=True)
 
+    barbearia = relationship("Barbearia", back_populates="clientes", lazy="joined")
     pedidos = relationship("Pedido", back_populates="cliente", lazy="selectin")
     pagamentos_crediario = relationship("PagamentoCrediario", back_populates="cliente", lazy="selectin")
 
@@ -64,12 +81,14 @@ class Produto(Base):
     __tablename__ = "produtos"
 
     id = Column(Integer, primary_key=True, index=True)
+    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=False, default=1)
     nome = Column(String(100), nullable=False)
     descricao = Column(Text, nullable=True)
     preco = Column(Float, nullable=False)
     quantidade_estoque = Column(Integer, nullable=False, default=0)
     imagem_url = Column(Text, nullable=True)
 
+    barbearia = relationship("Barbearia", back_populates="produtos", lazy="joined")
     itens_pedido = relationship("ItemPedido", back_populates="produto", lazy="selectin")
 
 
@@ -77,6 +96,7 @@ class Pedido(Base):
     __tablename__ = "pedidos"
 
     id = Column(Integer, primary_key=True, index=True)
+    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=False, default=1)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     status_pagamento = Column(String(50), default="pendente", nullable=False)
     status_pedido = Column(String(50), default="solicitado", nullable=False)
@@ -84,6 +104,7 @@ class Pedido(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    barbearia = relationship("Barbearia", back_populates="pedidos", lazy="joined")
     cliente = relationship("Cliente", back_populates="pedidos", lazy="joined")
     itens = relationship(
         "ItemPedido", back_populates="pedido", cascade="all, delete-orphan", lazy="selectin"
